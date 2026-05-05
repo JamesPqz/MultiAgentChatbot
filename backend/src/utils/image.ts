@@ -7,8 +7,3 @@ export const extractBase64Data = (base64Str: string): { mimeType: string; data: 
     if (!matches) throw new Error('Invalid base64 image format');
     return { mimeType: `image/${matches[1]}`, data: matches[2] };
 };
-
-export const getImageMimeType = (base64Str: string): string => {
-    const match = base64Str.match(/^data:image\/(\w+);base64,/);
-    return match ? `image/${match[1]}` : 'image/jpeg';
-};

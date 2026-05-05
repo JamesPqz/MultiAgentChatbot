@@ -1,6 +1,6 @@
 export const geminiConfig = {
     apiKey: process.env.GEMINI_API_KEY || '',
-    model: 'gemini-2.5-flash', 
+    model: 'gemini-3.1-flash-lite-preview', 
     temperature: 0.7, 
     maxOutputTokens: 512,  
     timeout: 10000,  

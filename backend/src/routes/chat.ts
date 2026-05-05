@@ -8,6 +8,9 @@ import { success, badRequest, unauthorized, internalError } from '../utils/respo
 import { logger } from '../utils/logger';
 import { Timer } from '../utils/performance';
 import { runAgent } from '../agents/runner';
+import { generateSessionId } from '../utils/string';
+import { isValidBase64Image, extractBase64Data } from '../utils/image';
+import { isValidMessage, isValidSessionId, sanitizeInput } from '../utils/validator';
 
 const router = Router();
 
@@ -17,7 +20,7 @@ setGlobalDispatcher(proxyAgent);
 
 // Gemini init
 const genAI = new GoogleGenerativeAI(geminiConfig.apiKey);
-const model = genAI.getGenerativeModel({ 
+const model = genAI.getGenerativeModel({
     model: geminiConfig.model,
     generationConfig: {
         temperature: geminiConfig.temperature,
@@ -40,38 +43,42 @@ async function getOutboundIP(): Promise<string> {
 }
 
 function getSessionId(inputSessionId: any): string {
-    return inputSessionId || `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return inputSessionId || generateSessionId();
 }
 
 router.post('/chat', async (req: Request, res: Response) => {
     const timer = new Timer();
-    
+
     try {
         const { message, sessionId: inputSessionId, image } = req.body;
-        
+
         if (!message && !image) {
             return badRequest(res, 'message or image required');
         }
-        
+        if (message && !isValidMessage(message)) {
+            return badRequest(res, 'Invalid message: must be 1-5000 characters');
+        }
+
         const sessionId = getSessionId(inputSessionId);
-        await saveMessage(sessionId, 'user', message || '[Image]');
-        
+        const cleanMessage = message ? sanitizeInput(message) : null;   
+        await saveMessage(sessionId, 'user', cleanMessage || '[Image]');
+
         const history = await getHistory(sessionId, 10);
-        const historyText = history.slice(0, -1).map(msg => 
+        const historyText = history.slice(0, -1).map(msg =>
             `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`
         ).join('\n');
-        
-        const fullPrompt = historyText 
-            ? `${historyText}\nUser: ${message || 'Describe this image'}` 
+
+        const fullPrompt = historyText
+            ? `${historyText}\nUser: ${message || 'Describe this image'}`
             : (message || 'Describe this image');
-        
+
         const outboundIP = await getOutboundIP();
         logger.info(`Outbound IP: ${outboundIP}`);
-        
+
         if (outboundIP.startsWith('182.') || outboundIP.startsWith('119.')) {
             logger.warn('IP in hk，proxy might be ineffective');
         }
-        
+
         let result;
         if (image) {
             const imageData = image.includes('base64,') ? image.split('base64,')[1] : image;
@@ -82,20 +89,20 @@ router.post('/chat', async (req: Request, res: Response) => {
         } else {
             result = await model.generateContent(fullPrompt);
         }
-        
+
         const responseText = result.response.text();
         await saveMessage(sessionId, 'assistant', responseText);
-        
+
         success(res, {
             sessionId,
             response: responseText,
             proxyIp: outboundIP,
             elapsedMs: timer.elapsed()
         });
-        
+
     } catch (err: any) {
         logger.error('Chat error:', err);
-        
+
         if (err.message?.includes('User location not supported')) {
             badRequest(res, 'proxy not working, please check your VPN/proxy settings');
         } else if (err.message?.includes('API key')) {
@@ -108,40 +115,47 @@ router.post('/chat', async (req: Request, res: Response) => {
 
 router.post('/chat/agent', async (req: Request, res: Response) => {
     const timer = new Timer();
-    
+
     try {
         const { message, sessionId: inputSessionId, image } = req.body;
-        
+
         if (!message && !image) {
             return badRequest(res, 'message or image required');
         }
-        
+        if (message && !isValidMessage(message)) {
+            return badRequest(res, 'Invalid message: must be 1-5000 characters');
+        }
+
         const sessionId = getSessionId(inputSessionId);
-        
+
         // save user messages
-        await saveMessage(sessionId, 'user', message || '[Image]');
-        
+        const cleanMessage = message ? sanitizeInput(message) : null;
+        await saveMessage(sessionId, 'user', cleanMessage || '[Image]');
+
         const history = await getHistory(sessionId, 10);
         const outboundIP = await getOutboundIP();
         logger.info(`Agent Outbound IP: ${outboundIP}`);
-        
+
         let responseText: string;
-        
+
         // vision-base query
         if (image) {
-            logger.info(`🖼️ Vision query detected, processing image...`);
-            
-            const imageData = image.includes('base64,') 
-                ? image.split('base64,')[1] 
-                : image;
-            
-            const visionModel = genAI.getGenerativeModel({ model: geminiConfig.model });
-            const visionResult = await visionModel.generateContent([
-                message || 'Please describe this image.',
-                { inlineData: { data: imageData, mimeType: 'image/jpeg' } }
-            ]);
-            responseText = visionResult.response.text();
-            logger.info(`Vision response generated`);
+            logger.info(`Vision query detected, processing image...`);
+
+            if (!isValidBase64Image(image)) {
+                logger.warn('Invalid base64 image format');
+                responseText = 'invalid image format, please provide a valid base64-encoded image';
+            } else {
+                const { mimeType, data } = extractBase64Data(image);
+
+                const visionModel = genAI.getGenerativeModel({ model: geminiConfig.model });
+                const visionResult = await visionModel.generateContent([
+                    message || 'Please describe this image',
+                    { inlineData: { data, mimeType } }
+                ]);
+                responseText = visionResult.response.text();
+                logger.info(`Vision response generated`);
+            }
         } else {
             // text dialogue query
             const { response: agentResponse, elapsedMs: agentElapsed } = await runAgent(
@@ -151,20 +165,20 @@ router.post('/chat/agent', async (req: Request, res: Response) => {
             );
             responseText = agentResponse;
         }
-        
+
         // save assistant response
         await saveMessage(sessionId, 'assistant', responseText);
-        
+
         success(res, {
             sessionId,
             response: responseText,
             proxyIp: outboundIP,
             elapsedMs: timer.elapsed()
         });
-        
+
     } catch (err: any) {
         logger.error('Agent error:', err);
-        
+
         if (err.message?.includes('User location not supported')) {
             badRequest(res, 'proxy not working, please check your VPN/proxy settings');
         } else {
@@ -177,6 +191,9 @@ router.post('/chat/agent', async (req: Request, res: Response) => {
 router.get('/history/:sessionId', async (req: Request, res: Response) => {
     try {
         const sessionId = String(req.params.sessionId);
+        if (!isValidSessionId(sessionId)) {
+            return badRequest(res, 'Invalid session ID format');
+        }
         const history = await getHistory(sessionId);
         success(res, { sessionId, history });
     } catch (err: any) {
@@ -188,6 +205,9 @@ router.get('/history/:sessionId', async (req: Request, res: Response) => {
 router.delete('/history/:sessionId', async (req: Request, res: Response) => {
     try {
         const sessionId = String(req.params.sessionId);
+        if (!isValidSessionId(sessionId)) {
+            return badRequest(res, 'Invalid session ID format');
+        }
         await clearHistory(sessionId);
         success(res, null, 'History cleared');
     } catch (err: any) {

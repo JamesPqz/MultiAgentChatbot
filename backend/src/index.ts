@@ -38,7 +38,7 @@ app.get('/health', (req, res) => {
 app.use(errorHandler);
 
 app.listen(PORT, () => {
-    console.log(`🚀 Server running on http://localhost:${PORT}`);
-    console.log(`📦 Environment: ${env.name}`);
-    console.log(`💾 MongoDB: connected`);
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Environment: ${env.name}`);
+    console.log(`MongoDB: connected`);
 });

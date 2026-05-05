@@ -20,6 +20,7 @@ import { createModel } from './model';
 import { weatherTool, searchTool } from './tools/index';
 import { logger } from '../utils/logger';
 import { constants } from '../config/constants';
+import { withTimeout } from '../utils/timeout';
 import { SYSTEM_PROMPT, FALLBACK_RESPONSE, TOOL_TIMEOUT_RESPONSE } from '../config/prompt';
 
 const tools = [weatherTool, searchTool];
@@ -31,17 +32,15 @@ const toolsByName = {
 const model = createModel().bindTools(tools);
 
 async function invokeModelWithTimeout(messages: any[], timeoutMs: number = constants.API_TIMEOUT_MS) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    
     try {
-        const response = await model.invoke(messages, { signal: controller.signal });
-        clearTimeout(timeoutId);
+        const response = await withTimeout(
+            model.invoke(messages),
+            timeoutMs,
+            `Model invocation timeout after ${timeoutMs}ms`
+        );
         return response;
     } catch (error: any) {
-        clearTimeout(timeoutId);
-        
-        if (error.name === 'AbortError') {
+        if (error.message?.toLowerCase().includes('timeout')) {
             logger.warn(`Model invoke timeout after ${timeoutMs}ms, returning fallback response`);
             return new AIMessage({ content: FALLBACK_RESPONSE });
         }
@@ -50,17 +49,15 @@ async function invokeModelWithTimeout(messages: any[], timeoutMs: number = const
 }
 
 async function invokeToolWithTimeout(tool: any, args: any, timeoutMs: number = constants.API_TIMEOUT_MS) {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-    
     try {
-        const result = await tool.invoke(args);
-        clearTimeout(timeoutId);
+        const result = await withTimeout(
+            tool.invoke(args) as Promise<string>,
+            timeoutMs,
+            `Tool ${tool.name} timeout after ${timeoutMs}ms`
+        );
         return result;
     } catch (error: any) {
-        clearTimeout(timeoutId);
-        
-        if (error.name === 'AbortError') {
+        if (error.message?.toLowerCase().includes('timeout')) {
             logger.warn(`Tool ${tool.name} timeout after ${timeoutMs}ms, returning fallback`);
             return TOOL_TIMEOUT_RESPONSE;
         }
@@ -129,7 +126,7 @@ async function toolsNode(state: AgentState) {
     };
 }
 
-// 构建图
+// build the state graph
 const workflow = new StateGraph<AgentState>({
     channels: {
         messages: { value: (a, b) => [...a, ...b], default: () => [] },
@@ -141,7 +138,6 @@ const workflow = new StateGraph<AgentState>({
 workflow.addNode('agent', agentNode);
 workflow.addNode('tools', toolsNode);
 
-// 使用 as any 绕过 TypeScript 类型检查
 workflow.addEdge(START as any, 'agent' as any);
 workflow.addConditionalEdges('agent' as any, (state: AgentState) => state.next);
 workflow.addEdge('tools' as any, 'agent' as any);
