@@ -5,36 +5,28 @@ import { logger } from '../../utils/logger';
 
 async function fetchRealWeather(city: string): Promise<string | null> {
     try {
-        const apiKey = process.env.OPENWEATHER_API_KEY;
-        if (!apiKey) {
-            logger.warn('OPENWEATHER_API_KEY not set, falling back to mock');
-            return null;
-        }
-
-        const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${apiKey}&units=metric`;
+        const url = `https://wttr.in/${encodeURIComponent(city)}?format=%C+%t+%w`;
+        
+        // 可以设置一个短一点的超时，比如 3 秒
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), constants.API_TIMEOUT_MS);
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
 
         const response = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
 
-        if (!response.ok) {
-            logger.warn(`Weather API returned ${response.status} for city: ${city}`);
+        if (response.ok) {
+            const weatherText = await response.text();
+            const result = weatherText.trim().split('\n')[0];
+            return `${city} weather: ${result}`;
+        } else {
+            console.warn(`Weather API (wttr.in) returned ${response.status} for city: ${city}`);
             return null;
         }
-
-        const data = await response.json();
-        const weatherDesc = data.weather[0].description;
-        const temp = Math.round(data.main.temp);
-        const humidity = data.main.humidity;
-
-        logger.info(`Weather API success for city: ${city}`);
-        return `${city}: ${weatherDesc}, ${temp}°C, humidity ${humidity}%.`;
     } catch (error: any) {
         if (error.name === 'AbortError') {
-            logger.warn(`Weather API timeout after ${constants.API_TIMEOUT_MS}ms for city: ${city}`);
+            console.warn(`Weather API (wttr.in) timeout for city: ${city}`);
         } else {
-            logger.warn(`Weather API error for city ${city}: ${error.message}`);
+            console.warn(`Weather API (wttr.in) error for city ${city}: ${error.message}`);
         }
         return null;
     }

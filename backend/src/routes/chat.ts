@@ -11,6 +11,7 @@ import { runAgent } from '../agents/runner';
 import { generateSessionId } from '../utils/string';
 import { isValidBase64Image, extractBase64Data } from '../utils/image';
 import { isValidMessage, isValidSessionId, sanitizeInput } from '../utils/validator';
+import { getGenAI, getVisionModel } from '../agents/model';
 
 const router = Router();
 
@@ -19,14 +20,8 @@ const proxyAgent = new ProxyAgent(proxyConfig.url);
 setGlobalDispatcher(proxyAgent);
 
 // Gemini init
-const genAI = new GoogleGenerativeAI(geminiConfig.apiKey);
-const model = genAI.getGenerativeModel({
-    model: geminiConfig.model,
-    generationConfig: {
-        temperature: geminiConfig.temperature,
-        maxOutputTokens: geminiConfig.maxOutputTokens
-    }
-});
+const genAI = getGenAI()
+const visionModel = getVisionModel()
 
 // get outbound IP
 async function getOutboundIP(): Promise<string> {
@@ -60,7 +55,7 @@ router.post('/chat', async (req: Request, res: Response) => {
         }
 
         const sessionId = getSessionId(inputSessionId);
-        const cleanMessage = message ? sanitizeInput(message) : null;   
+        const cleanMessage = message ? sanitizeInput(message) : null;
         await saveMessage(sessionId, 'user', cleanMessage || '[Image]');
 
         const history = await getHistory(sessionId, 10);
@@ -82,12 +77,18 @@ router.post('/chat', async (req: Request, res: Response) => {
         let result;
         if (image) {
             const imageData = image.includes('base64,') ? image.split('base64,')[1] : image;
-            result = await model.generateContent([
+            result = await visionModel.generateContent([
                 fullPrompt,
                 { inlineData: { data: imageData, mimeType: 'image/jpeg' } }
             ]);
         } else {
-            result = await model.generateContent(fullPrompt);
+            result = await genAI.getGenerativeModel({
+                model: geminiConfig.model,
+                generationConfig: {
+                    temperature: geminiConfig.temperature,
+                    maxOutputTokens: geminiConfig.maxOutputTokens
+                }
+            }).generateContent(fullPrompt);
         }
 
         const responseText = result.response.text();
@@ -133,8 +134,8 @@ router.post('/chat/agent', async (req: Request, res: Response) => {
         await saveMessage(sessionId, 'user', cleanMessage || '[Image]');
 
         const history = await getHistory(sessionId, 10);
-        const outboundIP = await getOutboundIP();
-        logger.info(`Agent Outbound IP: ${outboundIP}`);
+        // const outboundIP = await getOutboundIP();
+        // logger.info(`Agent Outbound IP: ${outboundIP}`);
 
         let responseText: string;
 
@@ -148,9 +149,11 @@ router.post('/chat/agent', async (req: Request, res: Response) => {
             } else {
                 const { mimeType, data } = extractBase64Data(image);
 
-                const visionModel = genAI.getGenerativeModel({ model: geminiConfig.model });
+                const visionPrompt = cleanMessage || 'Please describe this image';
+                const fullPrompt = `${visionPrompt}\n\nPlease keep your response concise. Limit to 2-3 sentences.`;
+
                 const visionResult = await visionModel.generateContent([
-                    message || 'Please describe this image',
+                    fullPrompt,
                     { inlineData: { data, mimeType } }
                 ]);
                 responseText = visionResult.response.text();
@@ -159,7 +162,7 @@ router.post('/chat/agent', async (req: Request, res: Response) => {
         } else {
             // text dialogue query
             const { response: agentResponse, elapsedMs: agentElapsed } = await runAgent(
-                message,
+                cleanMessage,
                 sessionId,
                 history
             );
@@ -172,7 +175,7 @@ router.post('/chat/agent', async (req: Request, res: Response) => {
         success(res, {
             sessionId,
             response: responseText,
-            proxyIp: outboundIP,
+            // proxyIp: outboundIP,
             elapsedMs: timer.elapsed()
         });
 

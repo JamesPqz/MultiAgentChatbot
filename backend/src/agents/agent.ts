@@ -14,7 +14,7 @@ require.cache[coreUuidPath]!.exports = patchedModule;
 //solve uuid v4 duplication issue end
 
 import { StateGraph, END, START } from '@langchain/langgraph';
-import { SystemMessage, AIMessage, ToolMessage } from '@langchain/core/messages';
+import { SystemMessage, AIMessage, ToolMessage, HumanMessage } from '@langchain/core/messages';
 import { AgentState } from './state';
 import { createModel } from './model';
 import { weatherTool, searchTool } from './tools/index';
@@ -23,6 +23,7 @@ import { constants } from '../config/constants';
 import { withTimeout } from '../utils/timeout';
 import { SYSTEM_PROMPT, FALLBACK_RESPONSE, TOOL_TIMEOUT_RESPONSE } from '../config/prompt';
 import { detectIntent } from '../service/intent';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 
 const tools = [weatherTool, searchTool];
 const toolsByName = {
@@ -79,37 +80,45 @@ async function executeToolDirectly(toolName: string, input: string): Promise<str
 }
 
 async function agentNode(state: AgentState) {
-    const userInput = state.messages[state.messages.length - 1]?.content || '';
+    // const userInput = state.messages[state.messages.length - 1]?.content || '';
     
-    const intent = detectIntent(userInput.toString());
-    logger.info(`Intent: ${intent.intent}, language: ${intent.language}`);
+    // const intent = detectIntent(userInput.toString());
+    // logger.info(`Intent: ${intent.intent}, language: ${intent.language}`);
     
     // Fast path: execute tool directly based on intent
-    if (intent.intent === 'weather') {
-        const city = intent.entity || 'Hong Kong';
-        logger.info(`Weather intent: executing get_weather tool for ${city}`);
-        const result = await executeToolDirectly('get_weather', city);
-        return {
-            messages: [new AIMessage({ content: result })],
-            next: END
-        };
-    }
+    // if (intent.intent === 'weather') {
+    //     const city = intent.entity || 'Hong Kong';
+    //     logger.info(`Weather intent: executing get_weather tool for ${city}`);
+    //     const result = await executeToolDirectly('get_weather', city);
+    //     return {
+    //         messages: [new AIMessage({ content: result })],
+    //         next: END
+    //     };
+    // }
     
-    if (intent.intent === 'search') {
-        const query = userInput.toString();
-        logger.info(`Search intent: executing web_search tool for ${query}`);
-        const result = await executeToolDirectly('web_search', query);
-        return {
-            messages: [new AIMessage({ content: result })],
-            next: END
-        };
-    }
+    // if (intent.intent === 'search') {
+    //     const query = userInput.toString();
+    //     logger.info(`Search intent: executing web_search tool for ${query}`);
+    //     const result = await executeToolDirectly('web_search', query);
+    //     return {
+    //         messages: [new AIMessage({ content: result })],
+    //         next: END
+    //     };
+    // }
+
+    // if (intent.intent === 'greeting') {
+    //     const response = await greetingModel.invoke([new HumanMessage(userInput)]);
+    //     return {
+    //         messages: [response],
+    //         next: END
+    //     };
+    // }
     
-    if (intent.intent === 'vision') {
-        // Vision intent: need to wait for image from user
-        // Pass through to LLM with image handling
-        logger.info(`Vision intent: passing to LLM`);
-    }
+    // if (intent.intent === 'vision') {
+    //     // Vision intent: need to wait for image from user
+    //     // Pass through to LLM with image handling
+    //     logger.info(`Vision intent: passing to LLM`);
+    // }
     
     const messagesWithSystem = [new SystemMessage(SYSTEM_PROMPT), ...state.messages];
     logger.info(`Agent node: calling model with ${messagesWithSystem.length} messages`);
