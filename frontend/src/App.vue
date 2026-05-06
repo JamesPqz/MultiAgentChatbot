@@ -31,4 +31,10 @@ body {
     justify-content: center;
     align-items: center;
 }
+
+.chat-container {
+    width: 800px;
+    max-width: 90vw;
+    min-width: 320px;
+}
 </style>

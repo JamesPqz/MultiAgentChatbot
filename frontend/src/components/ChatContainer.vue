@@ -75,15 +75,16 @@ const handleSend = async (message: string, image: string | null) => {
 
 <style scoped>
 .chat-container {
-    width: 100%;
-    max-width: 800px;
-    height: 90vh;
     background: white;
     border-radius: 20px;
     box-shadow: 0 20px 60px rgba(0,0,0,0.3);
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    width: 800px;
+    max-width: 90vw;
+    min-width: 320px;
+    height: 600px;
 }
 
 .chat-header {
