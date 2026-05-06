@@ -34,6 +34,7 @@ export async function runAgent(
     let lastSentLength = 0;
     let chunkCount = 0;
     for await (const chunk of stream) {
+        const chunkReceiveTime = Date.now();
         chunkCount++;
 
         let parsedChunk: any = chunk;

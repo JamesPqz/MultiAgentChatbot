@@ -80,46 +80,6 @@ async function executeToolDirectly(toolName: string, input: string): Promise<str
 }
 
 async function agentNode(state: AgentState) {
-    // const userInput = state.messages[state.messages.length - 1]?.content || '';
-    
-    // const intent = detectIntent(userInput.toString());
-    // logger.info(`Intent: ${intent.intent}, language: ${intent.language}`);
-    
-    // Fast path: execute tool directly based on intent
-    // if (intent.intent === 'weather') {
-    //     const city = intent.entity || 'Hong Kong';
-    //     logger.info(`Weather intent: executing get_weather tool for ${city}`);
-    //     const result = await executeToolDirectly('get_weather', city);
-    //     return {
-    //         messages: [new AIMessage({ content: result })],
-    //         next: END
-    //     };
-    // }
-    
-    // if (intent.intent === 'search') {
-    //     const query = userInput.toString();
-    //     logger.info(`Search intent: executing web_search tool for ${query}`);
-    //     const result = await executeToolDirectly('web_search', query);
-    //     return {
-    //         messages: [new AIMessage({ content: result })],
-    //         next: END
-    //     };
-    // }
-
-    // if (intent.intent === 'greeting') {
-    //     const response = await greetingModel.invoke([new HumanMessage(userInput)]);
-    //     return {
-    //         messages: [response],
-    //         next: END
-    //     };
-    // }
-    
-    // if (intent.intent === 'vision') {
-    //     // Vision intent: need to wait for image from user
-    //     // Pass through to LLM with image handling
-    //     logger.info(`Vision intent: passing to LLM`);
-    // }
-    
     const messagesWithSystem = [new SystemMessage(SYSTEM_PROMPT), ...state.messages];
     logger.info(`Agent node: calling model with ${messagesWithSystem.length} messages`);
     const response = await invokeModelWithTimeout(messagesWithSystem);

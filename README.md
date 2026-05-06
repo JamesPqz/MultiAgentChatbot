@@ -34,6 +34,7 @@ npm run dev
 
 #### Docker deployment:
 docker-compose down
+docker-compose build --no-cache
 docker-compose up -d
 docker-compose ps
 Access the frontend at http://localhost:8080 .

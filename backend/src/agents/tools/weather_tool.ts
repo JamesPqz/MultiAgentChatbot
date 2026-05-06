@@ -7,9 +7,8 @@ async function fetchRealWeather(city: string): Promise<string | null> {
     try {
         const url = `https://wttr.in/${encodeURIComponent(city)}?format=%C+%t+%w`;
         
-        // 可以设置一个短一点的超时，比如 3 秒
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        const timeoutId = setTimeout(() => controller.abort(), constants.API_TIMEOUT_MS);
 
         const response = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
