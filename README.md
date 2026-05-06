@@ -130,18 +130,18 @@ Optional variables:
 |--------------------|-------------------------------|---------------------------|
 | PORT               | 3000                          | Server port               |
 | GEMINI_MODEL       | gemini-3.1-flash-lite-preview | Model name                |
-| GEMINI_TEMPERATURE | 0.7                           | Response randomness       |
+| GEMINI_TEMPERATURE | 0.2                           | Response randomness       |
 | API_TIMEOUT_MS     | 5000                          | Timeout for external APIs |
+| MODEL_TIMEOUT_MS   | 30000                         | Timeout for external APIs |
 
 ## Optimizations
-- Intent detection routes simple queries (weather, search) directly use tool
 - External API calls have timeout fallbacks to mock data
 - MongoDB indexes on sessionId for fast history retrieval
 - Docker health checks for service monitoring
 
 ## Considerations
 - Hong Kong users maybe need a proxy to access Gemini API
-- Real weather and search APIs require additional API keys
+- Real search APIs require additional API keys, real weather don't(modified)
 - Mock data is used when real APIs timeout or keys are missing
 - Chat history persists across sessions using sessionId
 - Model response time may exceed 5 seconds due to external factors
