@@ -8,6 +8,7 @@ import { corsConfig } from './config/cors';
 import { requestLogger } from './middlewares/requestLogger';
 import { errorHandler } from './middlewares/errorHandler';
 import { env } from './config/env';
+import mongoose from 'mongoose';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -27,10 +28,16 @@ app.use('/api', chatRouter);
 
 // health check
 app.get('/health', (req, res) => {
-    res.json({ 
-        status: 'ok', 
+    const isMongoConnected = mongoose.connection.readyState === 1;
+
+    res.json({
+        status: isMongoConnected ? 'ok' : 'disconnected',
+        mongodb: {
+            connected: isMongoConnected,
+            readyState: mongoose.connection.readyState
+        },
         env: env.name,
-        timestamp: new Date().toISOString() 
+        timestamp: new Date().toISOString()
     });
 });
 
@@ -40,5 +47,5 @@ app.use(errorHandler);
 app.listen(PORT, () => {
     console.log(`Server running on http://localhost:${PORT}`);
     console.log(`Environment: ${env.name}`);
-    console.log(`MongoDB: connected`);
+    console.log(`MongoDB: ${mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'}`);
 });
