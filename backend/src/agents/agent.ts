@@ -22,6 +22,7 @@ import { logger } from '../utils/logger';
 import { constants } from '../config/constants';
 import { withTimeout } from '../utils/timeout';
 import { SYSTEM_PROMPT, FALLBACK_RESPONSE, TOOL_TIMEOUT_RESPONSE } from '../config/prompt';
+import { detectIntent } from '../service/intent';
 
 const tools = [weatherTool, searchTool];
 const toolsByName = {
@@ -31,7 +32,7 @@ const toolsByName = {
 
 const model = createModel().bindTools(tools);
 
-async function invokeModelWithTimeout(messages: any[], timeoutMs: number = constants.API_TIMEOUT_MS) {
+async function invokeModelWithTimeout(messages: any[], timeoutMs: number = constants.MODEL_TIMEOUT_MS) {
     try {
         const response = await withTimeout(
             model.invoke(messages),
@@ -59,14 +60,56 @@ async function invokeToolWithTimeout(tool: any, args: any, timeoutMs: number = c
     } catch (error: any) {
         if (error.message?.toLowerCase().includes('timeout')) {
             logger.warn(`Tool ${tool.name} timeout after ${timeoutMs}ms, returning fallback`);
-            return TOOL_TIMEOUT_RESPONSE;
+            // return TOOL_TIMEOUT_RESPONSE;
         }
         throw error;
     }
 }
 
+async function executeToolDirectly(toolName: string, input: string): Promise<string> {
+    if (toolName === 'get_weather') {
+        const result = await weatherTool.invoke(input);
+        return typeof result === 'string' ? result : JSON.stringify(result);
+    }
+    if (toolName === 'web_search') {
+        const result = await searchTool.invoke(input);
+        return typeof result === 'string' ? result : JSON.stringify(result);
+    }
+    return `Tool ${toolName} not found`;
+}
+
 async function agentNode(state: AgentState) {
-    logger.debug('Agent node: calling model', { messagesCount: state.messages.length });
+    const userInput = state.messages[state.messages.length - 1]?.content || '';
+    
+    const intent = detectIntent(userInput.toString());
+    logger.info(`Intent: ${intent.intent}, language: ${intent.language}`);
+    
+    // Fast path: execute tool directly based on intent
+    if (intent.intent === 'weather') {
+        const city = intent.entity || 'Hong Kong';
+        logger.info(`Weather intent: executing get_weather tool for ${city}`);
+        const result = await executeToolDirectly('get_weather', city);
+        return {
+            messages: [new AIMessage({ content: result })],
+            next: END
+        };
+    }
+    
+    if (intent.intent === 'search') {
+        const query = userInput.toString();
+        logger.info(`Search intent: executing web_search tool for ${query}`);
+        const result = await executeToolDirectly('web_search', query);
+        return {
+            messages: [new AIMessage({ content: result })],
+            next: END
+        };
+    }
+    
+    if (intent.intent === 'vision') {
+        // Vision intent: need to wait for image from user
+        // Pass through to LLM with image handling
+        logger.info(`Vision intent: passing to LLM`);
+    }
     
     const messagesWithSystem = [new SystemMessage(SYSTEM_PROMPT), ...state.messages];
     logger.info(`Agent node: calling model with ${messagesWithSystem.length} messages`);

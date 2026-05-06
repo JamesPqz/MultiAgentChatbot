@@ -45,37 +45,38 @@ function getMockWeather(city: string): string {
         logger.debug(`Weather mock exact match for: ${city}`);
         return WEATHER_MOCK_DATA[city];
     }
-    
+
     for (const [key, value] of Object.entries(WEATHER_MOCK_DATA)) {
-        if (city.toLowerCase().includes(key.toLowerCase()) || 
+        if (city.toLowerCase().includes(key.toLowerCase()) ||
             key.toLowerCase().includes(city.toLowerCase())) {
             logger.debug(`Weather mock fuzzy match: ${city} -> ${key}`);
             return value;
         }
     }
-    
+
     logger.debug(`Weather mock using default for: ${city}`);
     return DEFAULT_WEATHER_MOCK;
 }
 
 export const weatherTool = new DynamicTool({
     name: 'get_weather',
-    description: 'Get weather information for a city. Input should be the city name.',
+    description: 'Get current weather for a city. Use this when user asks about weather, temperature, or climate in a specific location like Hong Kong, Beijing, Shanghai, etc.',
     func: async (input: string) => {
         const city = input.trim();
         if (!city) {
             logger.warn('Weather tool called with empty city');
             return 'Please provide a city name.';
         }
-        
+
         logger.info(`Weather tool called for city: ${city}`);
-        
-        const realResult = await fetchRealWeather(city);
-        if (realResult) {
-            logger.info(`Weather tool returning real data for: ${city}`);
-            return realResult;
+
+        try {
+            const realResult = await fetchRealWeather(city);
+            if (realResult) return realResult;
+        } catch (error) {
+            logger.warn(`Weather API failed, using mock for ${city}`);
         }
-        
+
         logger.info(`Weather tool falling back to mock for: ${city}`);
         return getMockWeather(city);
     }

@@ -2,6 +2,7 @@ export const constants = {
 
     // API 超时配置
     API_TIMEOUT_MS: 100,
+    MODEL_TIMEOUT_MS: 6000,
 
     // 会话
     SESSION_ID_LENGTH: 64,
