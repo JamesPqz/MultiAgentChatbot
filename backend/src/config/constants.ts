@@ -7,6 +7,7 @@ export const constants = {
     // 会话
     SESSION_ID_LENGTH: 64,
     DEFAULT_SESSION_LIMIT: 20,
+    DEFAULT_HISTORY_LIMIT: 10,
     
     // 消息
     MAX_MESSAGE_LENGTH: 5000,

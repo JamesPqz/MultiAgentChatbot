@@ -12,6 +12,7 @@ import { generateSessionId } from '../utils/string';
 import { isValidBase64Image, extractBase64Data } from '../utils/image';
 import { isValidMessage, isValidSessionId, sanitizeInput } from '../utils/validator';
 import { getGenAI, getVisionModel } from '../agents/model';
+import { constants } from '../config/constants';
 
 const router = Router();
 
@@ -58,7 +59,7 @@ router.post('/chat', async (req: Request, res: Response) => {
         const cleanMessage = message ? sanitizeInput(message) : null;
         await saveMessage(sessionId, 'user', cleanMessage || '[Image]');
 
-        const history = await getHistory(sessionId, 10);
+        const history = await getHistory(sessionId, constants.DEFAULT_HISTORY_LIMIT);
         const historyText = history.slice(0, -1).map(msg =>
             `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`
         ).join('\n');
@@ -67,12 +68,12 @@ router.post('/chat', async (req: Request, res: Response) => {
             ? `${historyText}\nUser: ${message || 'Describe this image'}`
             : (message || 'Describe this image');
 
-        const outboundIP = await getOutboundIP();
-        logger.info(`Outbound IP: ${outboundIP}`);
+        // const outboundIP = await getOutboundIP();
+        // logger.info(`Outbound IP: ${outboundIP}`);
 
-        if (outboundIP.startsWith('182.') || outboundIP.startsWith('119.')) {
-            logger.warn('IP in hk，proxy might be ineffective');
-        }
+        // if (outboundIP.startsWith('182.') || outboundIP.startsWith('119.')) {
+        //     logger.warn('IP in hk，proxy might be ineffective');
+        // }
 
         let result;
         if (image) {
@@ -97,7 +98,7 @@ router.post('/chat', async (req: Request, res: Response) => {
         success(res, {
             sessionId,
             response: responseText,
-            proxyIp: outboundIP,
+            // proxyIp: outboundIP,
             elapsedMs: timer.elapsed()
         });
 
@@ -133,7 +134,7 @@ router.post('/chat/agent', async (req: Request, res: Response) => {
         const cleanMessage = message ? sanitizeInput(message) : null;
         await saveMessage(sessionId, 'user', cleanMessage || '[Image]');
 
-        const history = await getHistory(sessionId, 10);
+        const history = await getHistory(sessionId, constants.DEFAULT_HISTORY_LIMIT);
         // const outboundIP = await getOutboundIP();
         // logger.info(`Agent Outbound IP: ${outboundIP}`);
 

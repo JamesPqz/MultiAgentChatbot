@@ -34,7 +34,6 @@ export async function runAgent(
     let lastSentLength = 0;
     let chunkCount = 0;
     for await (const chunk of stream) {
-        const chunkReceiveTime = Date.now();
         chunkCount++;
 
         let parsedChunk: any = chunk;
@@ -106,7 +105,7 @@ export async function runAgent(
     }
 
     const elapsedMs = timer.elapsed();
-    const totalStreamTime = Date.now() - streamStart;
+    // const totalStreamTime = Date.now() - streamStart;
 
     if (!finalResponse && finalMessages.length > 0) {
         const lastMsg = finalMessages[finalMessages.length - 1];
@@ -116,14 +115,14 @@ export async function runAgent(
         }
     }
 
-    logger.info(`Summary:
-    - Total elapsed: ${elapsedMs}ms
-    - Stream processing: ${totalStreamTime}ms
-    - Nodes executed: ${nodeCount}
-    - Chunks received: ${chunkCount}
-    - First token delay: ${firstTokenTime ? firstTokenTime - streamStart : 'N/A'}ms
-    - Response length: ${finalResponse.length} chars
-    - Has tool calls: ${!!finalToolCalls}`);
+    // logger.info(`Summary:
+    // - Total elapsed: ${elapsedMs}ms
+    // - Stream processing: ${totalStreamTime}ms
+    // - Nodes executed: ${nodeCount}
+    // - Chunks received: ${chunkCount}
+    // - First token delay: ${firstTokenTime ? firstTokenTime - streamStart : 'N/A'}ms
+    // - Response length: ${finalResponse.length} chars
+    // - Has tool calls: ${!!finalToolCalls}`);
 
     logger.info(`Agent completed`, {
         hasToolCalls: !!finalToolCalls,

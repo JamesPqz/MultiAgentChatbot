@@ -22,8 +22,6 @@ import { logger } from '../utils/logger';
 import { constants } from '../config/constants';
 import { withTimeout } from '../utils/timeout';
 import { SYSTEM_PROMPT, FALLBACK_RESPONSE, TOOL_TIMEOUT_RESPONSE } from '../config/prompt';
-import { detectIntent } from '../service/intent';
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 
 const tools = [weatherTool, searchTool];
 const toolsByName = {
@@ -65,18 +63,6 @@ async function invokeToolWithTimeout(tool: any, args: any, timeoutMs: number = c
         }
         throw error;
     }
-}
-
-async function executeToolDirectly(toolName: string, input: string): Promise<string> {
-    if (toolName === 'get_weather') {
-        const result = await weatherTool.invoke(input);
-        return typeof result === 'string' ? result : JSON.stringify(result);
-    }
-    if (toolName === 'web_search') {
-        const result = await searchTool.invoke(input);
-        return typeof result === 'string' ? result : JSON.stringify(result);
-    }
-    return `Tool ${toolName} not found`;
 }
 
 async function agentNode(state: AgentState) {
