@@ -8,7 +8,7 @@ if (!fs.existsSync(logDir)) fs.mkdirSync(logDir, { recursive: true });
 const logFile = fs.createWriteStream(path.join(logDir, 'app.log'), { flags: 'a' });
 
 const write = (level: string, message: string, meta?: any) => {
-    const timestamp = new Date().toISOString();
+    const timestamp = new Date().toLocaleString();
     const log = `[${level}] ${timestamp} - ${message}${meta ? ' ' + JSON.stringify(meta) : ''}\n`;
     logFile.write(log);
     console.log(log.trim());

@@ -3,12 +3,13 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { connectDB } from './db/database';
-import chatRouter from './routes/chat';
+import chatRouter from './routers/chat';
 import { corsConfig } from './config/cors';
 import { requestLogger } from './middlewares/requestLogger';
 import { errorHandler } from './middlewares/errorHandler';
 import { env } from './config/env';
 import mongoose from 'mongoose';
+import abChatRouter from './routers/abChat';
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
@@ -25,6 +26,7 @@ app.use(requestLogger);
 
 // routes
 app.use('/api', chatRouter);
+app.use('/api/ab-chat', abChatRouter);
 
 // health check
 app.get('/health', (req, res) => {
@@ -37,7 +39,7 @@ app.get('/health', (req, res) => {
             readyState: mongoose.connection.readyState
         },
         env: env.name,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toLocaleString()
     });
 });
 

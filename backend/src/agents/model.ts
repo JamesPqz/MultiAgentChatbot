@@ -61,3 +61,29 @@ export const getVisionModel = () => {
         }
     });
 };
+
+import { ChatOpenAI } from '@langchain/openai';
+
+export const createQwenModel = () => {
+    return new ChatOpenAI({
+        model: 'qwen-turbo',
+        temperature: 0.5,
+        maxTokens: 1024,
+        apiKey: process.env.QWEN_API_KEY,
+        configuration: {
+            baseURL: process.env.QWEN_BASE_URL
+        }
+    });
+};
+
+export const getQwenVisionModel = () => {
+    return new ChatOpenAI({
+        model: 'qwen-vl-plus',
+        temperature: 0.4,
+        maxTokens: 150,
+        apiKey: process.env.QWEN_API_KEY,
+        configuration: {
+            baseURL: process.env.QWEN_BASE_URL
+        }
+    });
+};
