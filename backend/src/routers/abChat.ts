@@ -30,7 +30,8 @@ function determineVariant(sessionId: string): 'A' | 'B' {
 router.post('/chat', async (req: Request, res: Response) => {
     const timer = new Timer();
 
-    const { message, sessionId: inputSessionId, image, agentMode = 'auto' } = req.body;
+    const { message, sessionId: inputSessionId, image, agentMode} = req.body;
+    logger.info(`AgentMode: ${agentMode}, reqBody: ${JSON.stringify(req.body)}`);
 
     if (!message && !image) {
         return badRequest(res, 'message or image required');
@@ -41,7 +42,8 @@ router.post('/chat', async (req: Request, res: Response) => {
     try {
 
         await saveMessage(sessionId, 'user', cleanMessage || '[Image]');
-        const history = await getHistory(sessionId);
+        let history = await getHistory(sessionId);
+        history = history.slice(-6)
 
         let variant: 'A' | 'B';
 
@@ -145,16 +147,13 @@ router.post('/chat', async (req: Request, res: Response) => {
 
 router.post('/chat/resume', async (req: Request, res: Response) => {
     try {
-        const { sessionId, userResponse } = req.body;
-        if (!sessionId) {
-            return badRequest(res, 'sessionId required');
-        }
-        if (!userResponse) {
-            return badRequest(res, 'userResponse required');
+        const { sessionId, confirmed } = req.body;
+        if (!sessionId || typeof confirmed !== 'boolean') {
+            return badRequest(res, 'sessionId and confirmed are required');
         }
 
-        logger.info(`Resuming session ${sessionId} with user response: ${userResponse}`);
-        const resumeValue = userResponse === 'confirm' ? 'confirm' : 'cancel';
+        const resumeValue = confirmed? 'confirm' : 'cancel';
+        logger.info(`Resuming session ${sessionId} with user confirm: ${confirmed}`);
         const result = await multiAgentGraph.invoke(
             new Command({ resume: resumeValue }), 
             { configurable: { thread_id: sessionId } 

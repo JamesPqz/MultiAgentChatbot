@@ -25,7 +25,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(requestLogger);
 
 // routes
-app.use('/api', chatRouter);
+app.use('/api/', chatRouter);
 app.use('/api/ab-chat', abChatRouter);
 
 // health check

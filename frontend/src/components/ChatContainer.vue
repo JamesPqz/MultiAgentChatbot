@@ -1,8 +1,23 @@
 <template>
     <div class="chat-container">
-        <div class="chat-header">
-            <h1>AI Chatbot</h1>
-        </div>
+        <ChatHeader 
+            :sessionId="sessionId"
+            :agentMode="agentMode"
+            @update:sessionId="handleSessionChange"
+            @update:agentMode="agentMode = $event"
+            @refresh="loadHistory"
+            @toggle-stats="showABStats = !showABStats"
+            @clear-history="clearHistory"
+        />
+
+        <ABStatsPanel 
+            :visible="showABStats"
+            :loading="abLoading"
+            :stats="abStats"
+            @refresh="refreshABStats"
+            @clear="clearABStatsHandler"
+            @close="showABStats = false"
+        />
 
         <div class="chat-messages" ref="messagesContainer">
             <ChatMessage v-for="(msg, idx) in messages" :key="idx" :message="msg" />
@@ -14,6 +29,11 @@
                     </div>
                 </div>
             </div>
+            <InterruptConfirm 
+                :visible="interruptVisible"
+                :message="interruptMessage"
+                @confirm="handleInterruptConfirm"
+            />
             <div ref="messagesEnd" />
         </div>
 
@@ -22,10 +42,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick } from 'vue';
+import { ref, onMounted, nextTick, watch } from 'vue';
 import ChatMessage from './ChatMessage.vue';
 import ChatInput from './ChatInput.vue';
-import { sendMessage } from '../services/api';
+import ChatHeader from './ChatHeader.vue';
+import ABStatsPanel from './ABStatsPanel.vue';
+import InterruptConfirm from './InterruptConfirm.vue';
+import { sendMessage, getABStats, clearABStats, getChatHistory, clearChatHistory, resumeInterrupt } from '../services/api';
 import type { ChatMessage as ChatMessageType } from '../types';
 
 const messages = ref<ChatMessageType[]>([
@@ -34,8 +57,24 @@ const messages = ref<ChatMessageType[]>([
 const isLoading = ref(false);
 const isTyping = ref(false);
 const sessionId = ref<string | null>(localStorage.getItem('sessionId'));
+
+const agentMode = ref<'single' | 'multi' | 'auto'>('multi');
+watch(agentMode, (val) => {
+    console.log('ChatContainer agentMode changed to:', val);
+});
+
+const showABStats = ref(false);
+const abStats = ref({ total: 0, variantA: { count: 0, avgLatency: 0, avgResponseLength: 0 }, variantB: { count: 0, avgLatency: 0, avgResponseLength: 0 } });
+const abLoading = ref(false);
+
 const messagesEnd = ref<HTMLElement | null>(null);
 const messagesContainer = ref<HTMLElement | null>(null);
+
+// Interrupt
+const interruptVisible = ref(false);
+const interruptMessage = ref('');
+const pendingSessionId = ref('');
+
 
 const scrollToBottom = () => {
     nextTick(() => {
@@ -53,9 +92,16 @@ const handleSend = async (message: string, image: string | null) => {
     isTyping.value = true;
 
     try {
-        const response = await sendMessage({ message, sessionId: sessionId.value, image });
+        const data = await sendMessage({ message, sessionId: sessionId.value, image, agentMode: agentMode.value });
+        if (data.interrupted) {
+            interruptVisible.value = true;
+            interruptMessage.value = data.message || 'Operation requires confirmation.';
+            pendingSessionId.value = sessionId.value;
+            scrollToBottom();
+            return;
+        }
         isTyping.value = false;
-        messages.value.push({ role: 'assistant', content: response });
+        messages.value.push({ role: 'assistant', content: data.response.response || data.response });
 
         if (!sessionId.value) {
             const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
@@ -71,6 +117,76 @@ const handleSend = async (message: string, image: string | null) => {
         isLoading.value = false;
     }
 };
+
+const loadHistory = async () => {
+    if (!sessionId.value) return;
+    try {
+        const history = await getChatHistory(sessionId.value);
+        if (history?.length) {
+            messages.value = history.filter((h: any) => h.role !== 'system').map((h: any) => ({ role: h.role, content: h.content }));
+        }
+    } catch (error) {
+        console.error('Failed to load history:', error);
+    }
+    scrollToBottom();
+};
+
+const clearHistory = async () => {
+    if (!sessionId.value) return;
+    if (confirm('are you sure to clear the chat history?')) {
+        try {
+            await clearChatHistory(sessionId.value);
+            messages.value = [];
+            messages.value.push({ role: 'assistant', content: 'Chat history cleared. How can I help you?' });
+            scrollToBottom();
+        } catch (error) {
+            console.error('Failed to clear history:', error);
+        }
+    }
+};
+
+const handleSessionChange = (newId: string) => {
+    sessionId.value = newId;
+    localStorage.setItem('sessionId', newId);
+    loadHistory();
+};
+
+const refreshABStats = async () => {
+    abLoading.value = true;
+    try {
+        abStats.value = await getABStats();
+    } catch (error) {
+        console.error('Failed to load AB stats:', error);
+    } finally {
+        abLoading.value = false;
+    }
+};
+
+const clearABStatsHandler = async () => {
+    await clearABStats();
+    await refreshABStats();
+};
+
+const handleInterruptConfirm = async (confirmed: boolean) => {
+    interruptVisible.value = false;
+    isTyping.value = true;
+    
+    try {
+        const responseText = await resumeInterrupt(pendingSessionId.value, confirmed);
+        messages.value.push({ role: 'assistant', content: confirmed ? responseText : 'user cancelled the operation.' });
+        scrollToBottom();
+    } catch (error) {
+        messages.value.push({ role: 'assistant', content: 'Resume failed: ' + (error as Error).message });
+    } finally {
+        isTyping.value = false;
+    }
+};
+
+onMounted(async () => {
+    await loadHistory();
+    await refreshABStats();
+});
+
 </script>
 
 <style scoped>
