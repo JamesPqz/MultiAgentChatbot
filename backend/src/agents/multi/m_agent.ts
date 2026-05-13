@@ -1,5 +1,6 @@
 import { StateGraph, END, START } from '@langchain/langgraph';
 import { MultiAgentState } from './m_state';
+import { MemorySaver } from '@langchain/langgraph';
 import { m_supervisorNode } from './m_supervisor';
 import { m_toolAgentNode } from './m_toolAgent';
 import { m_visionAgentNode } from './m_visionAgent';
@@ -37,4 +38,6 @@ workflow.addEdge('tool_agent' as any, END as any);
 workflow.addEdge('vision_agent' as any, END as any);
 workflow.addEdge('chat_agent' as any, END as any);
 
-export const multiAgentGraph = workflow.compile();
+export const multiAgentGraph = workflow.compile({
+  checkpointer: new MemorySaver(),
+});

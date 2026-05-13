@@ -16,6 +16,7 @@ export async function m_supervisorNode(state: MultiAgentState): Promise<Partial<
         new SystemMessage(SUPERVISOR_PROMPT),
         new HumanMessage(userInput)
     ]);
+    logger.info(`Supervisor response: "${state.messages}"`);
     
     const output = response.content.toString().toLowerCase().trim();
     

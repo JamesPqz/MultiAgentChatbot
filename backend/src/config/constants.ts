@@ -1,8 +1,8 @@
 export const constants = {
 
     // API 超时配置
-    API_TIMEOUT_MS: 5000,
-    MODEL_TIMEOUT_MS: 30000,
+    API_TIMEOUT_MS: 2000,
+    MODEL_TIMEOUT_MS: 5000,
 
     // 会话
     SESSION_ID_LENGTH: 64,
@@ -18,13 +18,13 @@ export const constants = {
     SUPPORTED_IMAGE_TYPES: ['jpeg', 'png', 'jpg', 'gif', 'webp'],
     
     // 超时
-    DEFAULT_TIMEOUT_MS: 30000,
-    STREAM_TIMEOUT_MS: 60000,
+    DEFAULT_TIMEOUT_MS: 5000,
+    STREAM_TIMEOUT_MS: 8000,
     
     // 重试
     MAX_RETRIES: 3,
     RETRY_DELAY_MS: 1000,
-    RETRY_BACKOFF_FACTOR: 2,  // 指数退避倍数
+    RETRY_BACKOFF_FACTOR: 2, 
     
     // 模型
     DEFAULT_MODEL: 'gemini-2.5-flash',

@@ -37,8 +37,14 @@ export async function runMultiAgent(
 
     let finalResponse = '';
     let agentUsed = '';
+    let interrupted = false;
+    let interruptValue = null;
 
-    const stream = await multiAgentGraph.stream(initialState);
+    const stream = await multiAgentGraph.stream(initialState, {
+        configurable: {
+            thread_id: sessionId
+        }
+    });
 
     for await (const chunk of stream) {
         let parsedChunk: any = chunk;
@@ -50,6 +56,13 @@ export async function runMultiAgent(
             } catch (e) {
                 continue;
             }
+        }
+
+        if (parsedChunk.__interrupt__) {
+            interrupted = true;
+            interruptValue = parsedChunk.__interrupt__;
+            logger.info(`Graph interrupted: ${JSON.stringify(interruptValue)}`);
+            break;
         }
 
         if (parsedChunk && typeof parsedChunk === 'object') {
@@ -86,7 +99,9 @@ export async function runMultiAgent(
             }
         }
     }
-
+    if (interrupted) {
+        throw new Error('GRAPH_INTERRUPTED');
+    }
     const elapsedMs = Date.now() - startTime;
     logger.info(`Completed: ${agentUsed}, elapsed: ${elapsedMs}ms`);
 

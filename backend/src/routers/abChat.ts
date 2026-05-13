@@ -7,6 +7,8 @@ import { generateSessionId } from '../utils/string';
 import { extractBase64Data } from '../utils/image';
 import { isValidMessage, sanitizeInput } from '../utils/validator';
 import { saveABTestRecord, getABTestStats, clearABTestRecords } from '../models/abTest';
+import { multiAgentGraph } from '../agents/multi/m_agent';
+import { Command } from '@langchain/langgraph';
 
 // Single agent
 import { runAgent as runSingleAgent } from '../agents/runner';
@@ -28,15 +30,15 @@ function determineVariant(sessionId: string): 'A' | 'B' {
 router.post('/chat', async (req: Request, res: Response) => {
     const timer = new Timer();
 
+    const { message, sessionId: inputSessionId, image, agentMode = 'auto' } = req.body;
+
+    if (!message && !image) {
+        return badRequest(res, 'message or image required');
+    }
+
+    const sessionId = inputSessionId || generateSessionId();
+    const cleanMessage = message ? sanitizeInput(message) : null;
     try {
-        const { message, sessionId: inputSessionId, image, agentMode = 'auto' } = req.body;
-
-        if (!message && !image) {
-            return badRequest(res, 'message or image required');
-        }
-
-        const sessionId = inputSessionId || generateSessionId();
-        const cleanMessage = message ? sanitizeInput(message) : null;
 
         await saveMessage(sessionId, 'user', cleanMessage || '[Image]');
         const history = await getHistory(sessionId);
@@ -127,8 +129,53 @@ router.post('/chat', async (req: Request, res: Response) => {
         });
 
     } catch (err: any) {
-        logger.error('AB Chat error:', err);
-        internalError(res, err.message);
+        if (err.message === 'GRAPH_INTERRUPTED') {
+            // graph interrupted, likely waiting for user confirmation
+            return success(res, {
+                interrupted: true,
+                sessionId,
+                message: 'Operation requires confirmation. Please confirm via /resume endpoint.'
+            });
+        }else {
+            logger.error('AB Chat error:', err);
+            internalError(res, err.message);
+        }
+    }
+});
+
+router.post('/chat/resume', async (req: Request, res: Response) => {
+    try {
+        const { sessionId, userResponse } = req.body;
+        if (!sessionId) {
+            return badRequest(res, 'sessionId required');
+        }
+        if (!userResponse) {
+            return badRequest(res, 'userResponse required');
+        }
+
+        logger.info(`Resuming session ${sessionId} with user response: ${userResponse}`);
+        const resumeValue = userResponse === 'confirm' ? 'confirm' : 'cancel';
+        const result = await multiAgentGraph.invoke(
+            new Command({ resume: resumeValue }), 
+            { configurable: { thread_id: sessionId } 
+        } as any
+);
+        let responseText = 'Operation completed.';
+        if (result?.messages && Array.isArray(result.messages) && result.messages.length > 0) {
+            const lastMessage = result.messages[result.messages.length - 1];
+            responseText = typeof lastMessage.content === 'string' 
+                ? lastMessage.content 
+                : JSON.stringify(lastMessage.content);
+        }
+        
+        success(res, {
+            sessionId,
+            response: responseText,
+            resumed: true
+        });
+    }catch (error: any) {
+        logger.error('Resume error:', error);
+        internalError(res, error.message);
     }
 });
 

@@ -7,9 +7,10 @@ import { constants } from '../../config/constants';
 import { CHAT_AGENT_PROMPT } from '../../config/m_prompt';
 
 async function invokeWithTimeout(messages: any[], timeoutMs: number = constants.MODEL_TIMEOUT_MS) {
-    const model = createQwenModel();
-    logger.info(`Using model: ${model.model}`);
+    const model = createQwenModel()
+    // logger.info(`Using model: ${model.model}`);
     try {
+        logger.info(`Invoking model with ${messages}`)
         const response = await withTimeout(
             model.invoke(messages),
             timeoutMs,
