@@ -180,7 +180,12 @@ router.post('/chat', async (req: Request, res: Response) => {
             });
         } else {
             logger.error('AB Chat error:', err);
-            internalError(res, err.message);
+            if (stream) {
+                sendSSE(res, 'error', { message: err.message });
+                res.end();
+            } else {
+                internalError(res, err.message);
+            }
         }
     }
 });
