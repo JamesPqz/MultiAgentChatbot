@@ -94,7 +94,6 @@ const handleSend = async (message: string, image: string | null) => {
     isTyping.value = true;
 
     const tempIndex = messages.value.length;
-    messages.value.push({ role: 'assistant', content: '' });
     try {
         if(image) {
             const data = await sendMessage({ message, sessionId: sessionId.value, image, agentMode: agentMode.value });
@@ -108,6 +107,7 @@ const handleSend = async (message: string, image: string | null) => {
             isTyping.value = false;
             messages.value.push({ role: 'assistant', content: data.response.response || data.response });
         }else {
+            messages.value.push({ role: 'assistant', content: '' });
             await sendMessageStream(
                 { 
                     message, 

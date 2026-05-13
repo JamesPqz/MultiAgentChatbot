@@ -71,7 +71,7 @@ router.post('/chat', async (req: Request, res: Response) => {
     const timer = new Timer();
 
     const { message, sessionId: inputSessionId, image, agentMode, stream = true } = req.body;
-    logger.info(`AgentMode: ${agentMode}, reqBody: ${JSON.stringify(req.body)}`);
+    logger.info(`AgentMode: ${agentMode}, reqBody: ${JSON.stringify(req.body).substring(0, 50)}`);
 
     if (!message && !image) {
         return badRequest(res, 'message or image required');
@@ -80,7 +80,7 @@ router.post('/chat', async (req: Request, res: Response) => {
     const sessionId = inputSessionId || generateSessionId();
     const cleanMessage = message ? sanitizeInput(message) : null;
 
-    if (stream) {
+    if (!image && stream) {
         res.setHeader('Content-Type', 'text/event-stream');
         res.setHeader('Cache-Control', 'no-cache');
         res.setHeader('Connection', 'keep-alive');
@@ -106,12 +106,12 @@ router.post('/chat', async (req: Request, res: Response) => {
             if (firstTokenTimeRef.value === null && responseText) {
                 firstTokenTimeRef.value = Date.now();
             }
-            if (stream) {
-                sendSSE(res, 'chunk', { content: responseText });
-                sendSSE(res, 'end', { sessionId, variant, latency: Date.now() - agentStartTime });
-                res.end();
-                return;
-            }
+            // if (stream) {
+            //     sendSSE(res, 'chunk', { content: responseText });
+            //     sendSSE(res, 'end', { sessionId, variant, latency: Date.now() - agentStartTime });
+            //     res.end();
+            //     return;
+            // }
         } else if (variant === 'B') {
             const onChunk = stream ? createStreamCallback(res, firstTokenTimeRef, agentStartTime, variant, sessionId) : undefined;
             const result = await runMultiAgent(
@@ -154,7 +154,7 @@ router.post('/chat', async (req: Request, res: Response) => {
             });
         }
 
-        if (stream) {
+        if (!image && stream) {
             sendSSE(res, 'end', { sessionId, variant, latency: agentLatency, firstTokenLatency, responseLength: responseText.length });
             res.end();
         } else {

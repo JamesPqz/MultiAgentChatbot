@@ -1,3 +1,4 @@
+import { logger } from '../utils/logger';
 import { getQwenVisionModel } from '../agents/model';
 
 export interface ImageAnalysisResult {
@@ -13,11 +14,12 @@ export async function analyzeImage(
     const { mimeType, data } = extractBase64Data(imageBase64);
     const visionModel = getQwenVisionModel();
     
+    const fullPrompt = `${userPrompt || 'Describe this image'}\n\nPlease keep your response concise. Limit to 2-3 sentences.`;
     const visionResult = await visionModel.invoke([
         {
             role: 'user',
             content: [
-                { type: 'text', text: userPrompt || 'Describe this image' },
+                { type: 'text', text: fullPrompt },
                 {
                     type: 'image_url',
                     image_url: {
@@ -27,7 +29,7 @@ export async function analyzeImage(
             ]
         }
     ]);
-    
+    logger.info(`Vision model response: ${visionResult.content.toString()}`);
     return {
         responseText: visionResult.content.toString(),
         mimeType,

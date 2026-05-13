@@ -35,6 +35,7 @@ export const sendMessage = async (params: SendMessageParams): Promise<any> => {
     });
 
     const data = await response.json();
+    console.log('API response:', data); // Debug log
 
     if (!data.success) {
         throw new Error(data.error || 'Request failed');
