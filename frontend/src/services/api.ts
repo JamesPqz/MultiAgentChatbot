@@ -9,6 +9,13 @@ export interface SendMessageParams {
     resumeValue?: string;
 }
 
+export interface StreamCallbacks {
+    onChunk: (chunk: string) => void;
+    onEnd: (fullResponse: string) => void;
+    onError?: (error: string) => void;
+    onInterrupt?: (message: string) => void;
+}
+
 export const sendMessage = async (params: SendMessageParams): Promise<any> => {
     const body: any = {
         message: params.message,
@@ -35,6 +42,87 @@ export const sendMessage = async (params: SendMessageParams): Promise<any> => {
     console.log('API response data:', data); // Debug log
     return data.data;
 };
+
+export const sendMessageStream = async (
+    params: SendMessageParams,
+    callbacks: StreamCallbacks
+): Promise<void> => {
+    const body: any = {
+        message: params.message,
+        sessionId: params.sessionId,
+        agentMode: params.agentMode || 'auto',
+        stream: true
+    };
+    if (params.image) body.image = params.image;
+
+    const response = await fetch(`${API_URL}/ab-chat/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+    });
+
+    await handleSSEResponse(response, callbacks);
+}
+
+async function handleSSEResponse(
+    response: Response,
+    callbacks: StreamCallbacks
+): Promise<void> {
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+    let fullResponse = '';
+    let currentEvent = '';
+
+    while (reader) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+
+        for (const line of lines) {
+            if (line.startsWith('event: ')) {
+                currentEvent = line.slice(7).trim();
+            } else if (line.startsWith('data: ')) {
+                processSSEData(line.slice(6), currentEvent, callbacks, fullResponse, (newFull) => {
+                    fullResponse = newFull;
+                });
+            }
+        }
+    }
+}
+
+function processSSEData(
+    dataStr: string,
+    event: string,
+    callbacks: StreamCallbacks,
+    currentFull: string,
+    setFull: (full: string) => void
+): void {
+    try {
+        const data = JSON.parse(dataStr);
+        console.log('SSE data:', event, data);
+
+        switch (event) {
+            case 'chunk':
+                if (data.content) {
+                    callbacks.onChunk(data.content);
+                    setFull(currentFull + data.content);
+                }
+                break;
+            case 'interrupt':
+                callbacks.onInterrupt?.(data.message);
+                break;
+            case 'error':
+                callbacks.onError?.(data.message);
+                break;
+            case 'end':
+                callbacks.onEnd(currentFull);
+                break;
+        }
+    } catch (e) {
+    }
+}
 
 export async function getABStats(): Promise<any> {
     const response = await fetch('/api/ab-chat/ab-test/stats');
@@ -70,7 +158,7 @@ export async function resumeInterrupt(sessionId: string, confirmed: boolean): Pr
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ sessionId, confirmed })
     });
-    
+
     const data = await response.json();
     if (!data.success) throw new Error(data.error || 'Resume failed');
     return data.data.response;

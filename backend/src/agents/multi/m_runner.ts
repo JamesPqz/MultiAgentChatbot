@@ -12,7 +12,8 @@ export async function runMultiAgent(
     userMessage: string,
     sessionId: string,
     history: { role: string; content: string }[] = [],
-    image?: { imageData?: string; imageMimeType?: string }
+    image?: { imageData?: string; imageMimeType?: string },
+    onChunk?: (chunk: string) => void
 ): Promise<MultiAgentResult> {
     const startTime = Date.now();
 
@@ -94,13 +95,22 @@ export async function runMultiAgent(
             if (messagesList && Array.isArray(messagesList) && messagesList.length > 0) {
                 const lastMsg = messagesList[messagesList.length - 1];
                 if (lastMsg && typeof lastMsg.content === 'string') {
-                    finalResponse = lastMsg.content;
+                    const newContent = lastMsg.content;
+                    if (newContent !== finalResponse && onChunk) {
+                        const delta = newContent.slice(finalResponse.length);
+                        if (delta) {
+                            onChunk(delta);
+                        }
+                    }
+                    finalResponse = newContent;
                 }
             }
         }
     }
     if (interrupted) {
-        throw new Error('GRAPH_INTERRUPTED');
+        const e = new Error('GRAPH_INTERRUPTED');
+        e['interruptValue'] = interruptValue;
+        throw e;
     }
     const elapsedMs = Date.now() - startTime;
     logger.info(`Completed: ${agentUsed}, elapsed: ${elapsedMs}ms`);

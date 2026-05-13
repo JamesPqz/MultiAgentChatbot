@@ -9,7 +9,7 @@ import { logger } from '../../utils/logger';
 
 const workflow = new StateGraph<MultiAgentState>({
     channels: {
-        messages: { value: (a, b) => [...a, ...b], default: () => [] },
+        messages: { value: (a, b) => [...a, ...b].slice(-10), default: () => [] },
         sessionId: { value: (a, b) => b || a, default: () => '' },
         next: { value: (a, b) => b || a, default: () => '' },
         taskType: { value: (a, b) => b || a, default: () => null },

@@ -48,7 +48,7 @@ import ChatInput from './ChatInput.vue';
 import ChatHeader from './ChatHeader.vue';
 import ABStatsPanel from './ABStatsPanel.vue';
 import InterruptConfirm from './InterruptConfirm.vue';
-import { sendMessage, getABStats, clearABStats, getChatHistory, clearChatHistory, resumeInterrupt } from '../services/api';
+import { sendMessage, getABStats, clearABStats, getChatHistory, clearChatHistory, resumeInterrupt, sendMessageStream } from '../services/api';
 import type { ChatMessage as ChatMessageType } from '../types';
 
 const messages = ref<ChatMessageType[]>([
@@ -85,23 +85,66 @@ const scrollToBottom = () => {
 };
 
 const handleSend = async (message: string, image: string | null) => {
+    if (!message && !image) return;
+
     messages.value.push({ role: 'user', content: message || '[Image]' });
     scrollToBottom();
 
     isLoading.value = true;
     isTyping.value = true;
 
+    const tempIndex = messages.value.length;
+    messages.value.push({ role: 'assistant', content: '' });
     try {
-        const data = await sendMessage({ message, sessionId: sessionId.value, image, agentMode: agentMode.value });
-        if (data.interrupted) {
-            interruptVisible.value = true;
-            interruptMessage.value = data.message || 'Operation requires confirmation.';
-            pendingSessionId.value = sessionId.value;
-            scrollToBottom();
-            return;
+        if(image) {
+            const data = await sendMessage({ message, sessionId: sessionId.value, image, agentMode: agentMode.value });
+            if (data.interrupted) {
+                interruptVisible.value = true;
+                interruptMessage.value = data.message || 'Operation requires confirmation.';
+                pendingSessionId.value = sessionId.value;
+                scrollToBottom();
+                return;
+            }
+            isTyping.value = false;
+            messages.value.push({ role: 'assistant', content: data.response.response || data.response });
+        }else {
+            await sendMessageStream(
+                { 
+                    message, 
+                    sessionId: sessionId.value, 
+                    image, 
+                    agentMode: agentMode.value 
+                },
+                {
+                    onChunk: (chunk: string) => {
+                        messages.value[tempIndex].content += chunk;
+                        scrollToBottom();
+                    },
+                    onEnd: (fullResponse: string) => {
+                        isLoading.value = false;
+                        if (messages.value[tempIndex].content !== fullResponse) {
+                            messages.value[tempIndex].content = fullResponse;
+                        }
+                        isTyping.value = false;
+                        scrollToBottom();
+                    },
+                    onInterrupt: (msg: string) => {
+                        isLoading.value = false;
+                        messages.value.splice(tempIndex, 1);
+                        interruptVisible.value = true;
+                        interruptMessage.value = msg || 'Operation requires confirmation.';
+                        pendingSessionId.value = sessionId.value;
+                        scrollToBottom();
+                    },
+                    onError: (error: string) => {
+                        isLoading.value = false;
+                        messages.value[tempIndex].content = `Error: ${error}`;
+                        scrollToBottom();
+                        isTyping.value = false;
+                    }
+                }
+            )
         }
-        isTyping.value = false;
-        messages.value.push({ role: 'assistant', content: data.response.response || data.response });
 
         if (!sessionId.value) {
             const newSessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
