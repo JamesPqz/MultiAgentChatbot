@@ -1,7 +1,8 @@
 import { AIMessage, ToolMessage, SystemMessage } from '@langchain/core/messages';
 import { MultiAgentState } from './m_state';
 import { createQwenModel } from '../model';
-import { weatherTool, searchTool, sendEmailTool, timeTool, deleteFileTool } from '../tools/index';
+import { weatherTool, searchTool, sendEmailTool, timeTool, deleteFileTool,
+    confirmTransferTool,confirmRiskAcknowledgmentTool,confirmIdentityChangeTool } from '../tools/index';
 import { logger } from '../../utils/logger';
 import { withTimeout } from '../../utils/timeout';
 import { constants } from '../../config/constants';
@@ -9,16 +10,21 @@ import { TOOL_AGENT_PROMPT } from '../../config/m_prompt';
 import { handleInterrupt } from './m_interrupt';
 import { model } from 'mongoose';
 
-const tools = [weatherTool, searchTool, sendEmailTool, timeTool, deleteFileTool];
+const tools = [weatherTool, searchTool, sendEmailTool, timeTool, deleteFileTool,
+    confirmTransferTool,confirmRiskAcknowledgmentTool,confirmIdentityChangeTool];
 const toolsByName = {
     [weatherTool.name]: weatherTool,
     [searchTool.name]: searchTool,
     [sendEmailTool.name]: sendEmailTool,
     [timeTool.name]: timeTool,
-    [deleteFileTool.name]: deleteFileTool
+    [deleteFileTool.name]: deleteFileTool,
+    [confirmTransferTool.name]: confirmTransferTool,
+    [confirmRiskAcknowledgmentTool.name]: confirmRiskAcknowledgmentTool,
+    [confirmIdentityChangeTool.name]: confirmIdentityChangeTool
 };
 
-const SENSITIVE_TOOLS = ['send_email', 'delete_file', 'make_payment', 'update_record'];
+const SENSITIVE_TOOLS = ['send_email', 'delete_file', 
+    'confirm_transfer','confirm_risk_acknowledgment','confirm_identity_change'];
 
 async function invokeToolWithTimeout(tool: any, args: any, timeoutMs: number = constants.API_TIMEOUT_MS) {
     try {

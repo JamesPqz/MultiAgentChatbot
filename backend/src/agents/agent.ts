@@ -17,20 +17,24 @@ import { StateGraph, END, START } from '@langchain/langgraph';
 import { SystemMessage, AIMessage, ToolMessage, HumanMessage } from '@langchain/core/messages';
 import { AgentState } from './state';
 import { createModel } from './model';
-import { weatherTool, searchTool, timeTool, deleteFileTool } from './tools/index';
+import { weatherTool, searchTool, timeTool, deleteFileTool, confirmIdentityChangeTool, confirmRiskAcknowledgmentTool, confirmTransferTool } from './tools/index';
 import { logger } from '../utils/logger';
 import { constants } from '../config/constants';
 import { withTimeout } from '../utils/timeout';
 import { SYSTEM_PROMPT, FALLBACK_RESPONSE, TOOL_TIMEOUT_RESPONSE } from '../config/prompt';
 import { sendEmailTool } from './tools/email_tool';
 
-const tools = [weatherTool, searchTool, sendEmailTool, timeTool, deleteFileTool];
+const tools = [weatherTool, searchTool, sendEmailTool, timeTool, deleteFileTool, 
+    confirmTransferTool, confirmRiskAcknowledgmentTool, confirmIdentityChangeTool];
 const toolsByName = {
     [weatherTool.name]: weatherTool,
     [searchTool.name]: searchTool,
     [sendEmailTool.name]: sendEmailTool,
     [timeTool.name]: timeTool,
-    [deleteFileTool.name]: deleteFileTool
+    [deleteFileTool.name]: deleteFileTool,
+    [confirmTransferTool.name]: confirmTransferTool,
+    [confirmRiskAcknowledgmentTool.name]: confirmRiskAcknowledgmentTool,
+    [confirmIdentityChangeTool.name]: confirmIdentityChangeTool
 };
 
 async function invokeModelWithTimeout(messages: any[], timeoutMs: number = constants.MODEL_TIMEOUT_MS) {
