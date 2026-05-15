@@ -145,3 +145,24 @@ Optional variables:
 - Mock data is used when real APIs timeout or keys are missing
 - Chat history persists across sessions using sessionId
 - Model response time may exceed 5 seconds due to external factors
+
+
+tar --exclude='node_modules' \
+    --exclude='.git' \
+    --exclude='.env' \
+    --exclude='.env.*' \
+    --exclude='logs' \
+    --exclude='*.log' \
+    --exclude='dist' \
+    --exclude='.DS_Store' \
+    --exclude='.vscode' \
+    --exclude='.idea' \
+    --exclude='tests' \
+    --exclude='project.tar.gz' \
+    -czf project.tar.gz .
+
+scp project.tar.gz root@47.86.56.73:/root/
+
+ssh root@47.86.56.73
+
+tar -xzf project.tar.gz

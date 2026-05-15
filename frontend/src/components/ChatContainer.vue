@@ -165,9 +165,9 @@ const loadHistory = async () => {
     if (!sessionId.value) return;
     try {
         const history = await getChatHistory(sessionId.value);
-        if (history?.length) {
+        // if (history?.length) {
             messages.value = history.filter((h: any) => h.role !== 'system').map((h: any) => ({ role: h.role, content: h.content }));
-        }
+        // }
     } catch (error) {
         console.error('Failed to load history:', error);
     }

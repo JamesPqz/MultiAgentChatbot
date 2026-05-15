@@ -1,5 +1,9 @@
 FROM node:20-alpine
 
+
+ENV NODE_TLS_REJECT_UNAUTHORIZED=0
+ENV NODE_OPTIONS="--dns-result-order=ipv4first"
+
 WORKDIR /app
 
 COPY package*.json ./

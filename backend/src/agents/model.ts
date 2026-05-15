@@ -63,12 +63,13 @@ export const getVisionModel = () => {
 };
 
 import { ChatOpenAI } from '@langchain/openai';
+import { qwenConfig } from '@/config/qwen';
 
 export const createQwenModel = () => {
     return new ChatOpenAI({
-        model: 'qwen3.6-plus',
-        temperature: 0.5,
-        maxTokens: 1024,
+        model: qwenConfig.model,
+        temperature: qwenConfig.temperature,
+        maxTokens: qwenConfig.maxTokens,
         apiKey: process.env.QWEN_API_KEY,
         configuration: {
             baseURL: process.env.QWEN_BASE_URL
@@ -78,9 +79,9 @@ export const createQwenModel = () => {
 
 export const getQwenVisionModel = () => {
     return new ChatOpenAI({
-        model: 'qwen-vl-plus',
-        temperature: 0.4,
-        maxTokens: 150,
+        model: qwenConfig.visionModel,
+        temperature: qwenConfig.temperature,
+        maxTokens: qwenConfig.maxTokens,
         apiKey: process.env.QWEN_API_KEY,
         configuration: {
             baseURL: process.env.QWEN_BASE_URL
