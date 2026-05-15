@@ -63,7 +63,7 @@ export const getVisionModel = () => {
 };
 
 import { ChatOpenAI } from '@langchain/openai';
-import { qwenConfig } from '@/config/qwen';
+import { qwenConfig } from '../config/qwen';
 
 export const createQwenModel = () => {
     return new ChatOpenAI({
