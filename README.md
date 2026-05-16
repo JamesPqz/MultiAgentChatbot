@@ -10,133 +10,159 @@ An AI chatbot server that integrates external APIs, built-in knowledge, and visi
 - A Qwen model API 
 
 ### Installation
-Clone the repository:
+- Clone the repository:
+```
 git clone https://github.com/JamesPqz/MultiAgentChatbot.git
 cd backend
 npm i
+```
 
-Configure environment variables:
+- Configure environment variables:
+```
 cp .env.example .env
+```
 
-Edit `.env` with your API keys and settings.
-Start MongoDB locally:
+- Edit `.env` with your API keys and settings.
+- Start MongoDB locally:
+```
 mongod --dbpath ./data
+```
 
 #### Build/Run the backend:
-npm run build / npm run dev
-The server will start on port 3000.
+- npm run build / npm run dev
+- The server will start on port 3000.
 
 #### Build/Run the frontend:
+```
 cd frontend
 npm i
 npm run build
 npm run dev
+```
 
 #### Docker deployment:
+```
 docker-compose down
 docker-compose build --no-cache
 docker-compose up -d
 docker-compose ps
-Access the frontend at http://localhost:8080 .
+```
+- Access the frontend at http://localhost:8080 .
 
 ### Testing
-Test health:
+- Test health:
+```
 curl http://localhost:3000/health
-Expected response:
+```
+- Expected response:
+```
 {"status":"ok","env":"docker","timestamp":"2026-05-06T03:35:49.453Z"}%  
+```
 
-Send a test request:
+- Send a test request:
 ```
 curl -X POST http://localhost:3000/api/chat \
   -H "Content-Type: application/json" \
   -d '{"message": "Hello"}'
 ```
-Expected response:
+- Expected response:
 ```
 {"success":true,"data":{"sessionId":"1778036896067_p3z9x380","response":"Hello! How can I help you today?","elapsedMs":2383}}%  
 ```
 
-Test agent with tool call:
+- Test agent with tool call:
 ```
 curl -X POST http://localhost:3000/api/chat/agent \
   -H "Content-Type: application/json" \
   -d '{"message": "What is the weather in Hong Kong?"}'
 ```
-Expected response:
+- Expected response:
 ```
 {"success":true,"data":{"sessionId":"1778036992110_jekezu9c","response":"Hong Kong: Showers, 27°C, humidity 80%.","elapsedMs":1751}}%  
 ```
 
-Test web search:
+- Test web search:
 ```
 curl -X POST http://localhost:3000/api/chat/agent -H "Content-Type: application/json" -d '{"message": "Search for latest AI news"}'
 ```
-Expected response:
+- Expected response:
 ```
 {"success":true,"data":{"sessionId":"1778037107061_kgy9r9cp","response":"Artificial Intelligence is transforming industries worldwide. Latest developments include multimodal models and agent-based systems.","elapsedMs":1795}}%  
 ```
 
-Test vision query:
+- Test vision query:
 ```
 curl -X POST http://localhost:3000/api/chat/agent \
   -H "Content-Type: application/json" \
   -d '{"message": "What color is this image?", "image": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="}'
 ```
-Expected response:
+- Expected response:
 ```
 {"success":true,"data":{"sessionId":"1778037268562_kvxu8psw","response":"The color of the image is a shade of **salmon** or **coral**. Its hexadecimal color code is approximately **#FA8072**.","elapsedMs":4141}}% 
 ```
 
-Test get history:
+- Test get history:
+```
 curl http://localhost:3000/api/history/session_xxx
-Expected response:
+```
+- Expected response:
 ```
 {"success":true,"data":{"sessionId":"1778037268562_kvxu8psw","history":[{"role":"user","content":"What color is this image?","timestamp":"2026-05-06T03:14:28.562Z","_id":"69fab2140075db3e745f4317"},{"role":"assistant","content":"The color of the image is a shade of **salmon** or **coral**. Its hexadecimal color code is approximately **#FA8072**.","timestamp":"2026-05-06T03:14:33.698Z","_id":"69fab2190075db3e745f431a"}]}}%   
 ```
 
-Test delete history:
+- Test delete history:
+```
 curl -X DELETE http://localhost:3000/api/history/session_xxx
-Expected response:
-{"success":true,"message":"History cleared","data":null}%    
+```
+- Expected response:
+```
+{"success":true,"message":"History cleared","data":null}%   
+``` 
 
 
-Test AB chat (single/multi/auto mode):
+- Test AB chat (single/multi/auto mode):
 ```
 curl -X POST http://localhost:3000/api/ab-chat/chat -H "Content-Type: application/json" -d '{"message":"Hello","agentMode":"auto","stream":false}'
 ```
-Expected response:
+- Expected response:
 ```
 {"success":true,"data":{"sessionId":"1778933321980_moh2nc2f","response":"Hello! How can I help you today?","variant":"A","latency":2649,"firstTokenLatency":2649,"elapsedMs":2673}}%  
 ```
 
-Test interrupt & resume interrupted operation:
+- Test interrupt & resume interrupted operation:
 ```
 curl -X POST http://localhost:3000/api/ab-chat/chat -H "Content-Type: application/json" -d '{"message":"delete file 1.txt","agentMode":"multi","stream":false}'
 ```
-Expected response:
+- Expected response:
 ```
 {"success":true,"data":{"interrupted":true,"sessionId":"1778933472220_18lvtko0","message":"Operation requires confirmation. Please confirm via /resume endpoint."}}%  
 ```
 ```
 curl -X POST http://localhost:3000/api/ab-chat/chat/resume -H "Content-Type: application/json" -d '{"sessionId":"1778933472220_18lvtko0","confirmed":true}'
 ```
-Expected response:
+- Expected response:
 ```
 {"success":true,"data":{"sessionId":"1778933472220_18lvtko0","response":"File would be deleted: 1.txt","resumed":true}}%       
 ``` 
 
 
-Test AB test statistics:
+- Test AB test statistics:
+```
 curl http://localhost:3000/api/ab-chat/ab-test/stats
-Expected response:
+```
+- Expected response:
 ```
 {"success":true,"data":{"total":2,"variantA":{"count":2,"avgLatency":2538,"avgResponseLength":32},"variantB":{"count":0,"avgLatency":0,"avgResponseLength":0}}}%   
 ```
 
-Test clear AB test data:
+- Test clear AB test data:
+```
 curl -X DELETE http://localhost:3000/api/ab-chat/ab-test/clear
-Expected response:
+```
+- Expected response:
+```
 {"success":true,"message":"AB test data cleared","data":null}%   
+```
 
 ## API Endpoints
 
@@ -153,11 +179,11 @@ Expected response:
 | DELETE | /api/ab-chat/ab-test/clear| Clear AB test records            |
 
 ### Response Format
-Refer to Testing
+- Refer to Testing
 
 ## Environment Variables
 
-Required variables:
+- Required variables:
 
 | Variable       | Description                     |
 |----------------|---------------------------------|
@@ -166,7 +192,7 @@ Required variables:
 | QWEN_API_KEY   | Your Qwen API key               |
 | QWEN_BASE_URL  | QWEN_BASE_URL                   |
 
-Optional variables:
+- Optional variables:
 
 | Variable           | Default                       | Description               |
 |--------------------|-------------------------------|---------------------------|
@@ -195,5 +221,5 @@ Optional variables:
 - AB test records latency, response length, and success rate
 
 ## Deployment
-Deployment reference: deploy.txt
-AWS access address: http://13.229.135.99
+- Deployment reference: deploy.txt
+- AWS access address: http://13.229.135.99
