@@ -7,11 +7,11 @@ An AI chatbot server that integrates external APIs, built-in knowledge, and visi
 - Node.js
 - MongoDB
 - A Gemini model API key from Google
-- VPN/proxy for Hong Kong users
+- A Qwen model API 
 
 ### Installation
 Clone the repository:
-git clone https://github.com/SolosCodingInterview/JamesPoon.git
+git clone https://github.com/JamesPqz/MultiAgentChatbot.git
 cd backend
 npm i
 
@@ -99,15 +99,58 @@ curl -X DELETE http://localhost:3000/api/history/session_xxx
 Expected response:
 {"success":true,"message":"History cleared","data":null}%    
 
+
+Test AB chat (single/multi/auto mode):
+```
+curl -X POST http://localhost:3000/api/ab-chat/chat -H "Content-Type: application/json" -d '{"message":"Hello","agentMode":"auto","stream":false}'
+```
+Expected response:
+```
+{"success":true,"data":{"sessionId":"1778933321980_moh2nc2f","response":"Hello! How can I help you today?","variant":"A","latency":2649,"firstTokenLatency":2649,"elapsedMs":2673}}%  
+```
+
+Test interrupt & resume interrupted operation:
+```
+curl -X POST http://localhost:3000/api/ab-chat/chat -H "Content-Type: application/json" -d '{"message":"delete file 1.txt","agentMode":"multi","stream":false}'
+```
+Expected response:
+```
+{"success":true,"data":{"interrupted":true,"sessionId":"1778933472220_18lvtko0","message":"Operation requires confirmation. Please confirm via /resume endpoint."}}%  
+```
+```
+curl -X POST http://localhost:3000/api/ab-chat/chat/resume -H "Content-Type: application/json" -d '{"sessionId":"1778933472220_18lvtko0","confirmed":true}'
+```
+Expected response:
+```
+{"success":true,"data":{"sessionId":"1778933472220_18lvtko0","response":"File would be deleted: 1.txt","resumed":true}}%       
+``` 
+
+
+Test AB test statistics:
+curl http://localhost:3000/api/ab-chat/ab-test/stats
+Expected response:
+```
+{"success":true,"data":{"total":2,"variantA":{"count":2,"avgLatency":2538,"avgResponseLength":32},"variantB":{"count":0,"avgLatency":0,"avgResponseLength":0}}}%   
+```
+
+Test clear AB test data:
+curl -X DELETE http://localhost:3000/api/ab-chat/ab-test/clear
+Expected response:
+{"success":true,"message":"AB test data cleared","data":null}%   
+
 ## API Endpoints
 
-| Method | Endpoint                | Description                      |
-|--------|-------------------------|----------------------------------|
-| POST   | /api/chat               | Text chat without tools          |
-| POST   | /api/chat/agent         | Full agent with tools and vision |
-| GET    | /api/history/:sessionId | Get chat history                 |
-| DELETE | /api/history/:sessionId | Clear chat history               |
-| GET    | /health                 | Health check                     |
+| Method | Endpoint                  | Description                      |
+|--------|---------------------------|----------------------------------|
+| POST   | /api/chat                 | Text chat without tools          |
+| POST   | /api/chat/agent           | Full agent with tools and vision |
+| GET    | /api/history/:sessionId   | Get chat history                 |
+| DELETE | /api/history/:sessionId   | Clear chat history               |
+| POST   | /api/ab-chat/chat         | AB test chat (single/multi/auto) |
+| POST   | /api/ab-chat/chat/resume  | Resume interrupted session.      |
+| GET    | /health                   | Health check                     |
+| GET    | /api/ab-chat/ab-test/stats| Get AB test statistics           |
+| DELETE | /api/ab-chat/ab-test/clear| Clear AB test records            |
 
 ### Response Format
 Refer to Testing
@@ -116,23 +159,26 @@ Refer to Testing
 
 Required variables:
 
-| Variable       | Description                                                       |
-|----------------|-------------------------------------------------------------------|
-| GEMINI_API_KEY | Your Gemini API key                                               |
-| MONGODB_URI    | MongoDB connection string                                         |
-| PROXY_ENABLED  | Set to true if behind proxy                                       |
-| PROXY_HOST     | Proxy host (127.0.0.1 for local, host.docker.internal for Docker) |
-| PROXY_PORT     | Proxy port (default 7897)                                         |
+| Variable       | Description                     |
+|----------------|---------------------------------|
+| GEMINI_API_KEY | Your Gemini API key             |
+| MONGODB_URI    | MongoDB connection string       |
+| QWEN_API_KEY   | Your Qwen API key               |
+| QWEN_BASE_URL  | QWEN_BASE_URL                   |
 
 Optional variables:
 
 | Variable           | Default                       | Description               |
 |--------------------|-------------------------------|---------------------------|
 | PORT               | 3000                          | Server port               |
-| GEMINI_MODEL       | gemini-3.1-flash-lite-preview | Model name                |
-| GEMINI_TEMPERATURE | 0.2                           | Response randomness       |
-| API_TIMEOUT_MS     | 5000                          | Timeout for external APIs |
-| MODEL_TIMEOUT_MS   | 30000                         | Timeout for external APIs |
+| GEMINI_MODEL       | gemini-2.5-flash              | Model name                |
+| GEMINI_VISION_MODEL| gemini-2.5-flash-lite         | Model name                |
+| QWEN_MODEL         | qwen3.6-flash                 | Model name                |
+| QWEN_CHAT_MODEL    | qwen3-coder-flash             | Model name                |
+| QWEN_VISION_MODEL  | qwen-vl-plus                  | Model name                |
+| GEMINI_TEMPERATURE | 0.3                           | Response randomness       |
+| API_TIMEOUT_MS     | 2000                          | Timeout for external APIs |
+| MODEL_TIMEOUT_MS   | 5000                          | Timeout for external APIs |
 
 ## Optimizations
 - External API calls have timeout fallbacks to mock data
@@ -140,29 +186,14 @@ Optional variables:
 - Docker health checks for service monitoring
 
 ## Considerations
-- Hong Kong users maybe need a proxy to access Gemini API
-- Real search APIs require additional API keys, real weather don't(modified)
+- Real search APIs require additional API keys
 - Mock data is used when real APIs timeout or keys are missing
 - Chat history persists across sessions using sessionId
-- Model response time may exceed 5 seconds due to external factors
+- AgentMode supports single / multi / auto (A/B test)
+- Auto mode: Variant A = Gemini single agent, Variant B = Qwen multi-agent
+- Sensitive tools require user confirmation via interrupt & resume flow
+- AB test records latency, response length, and success rate
 
-
-tar --exclude='node_modules' \
-    --exclude='.git' \
-    --exclude='.env' \
-    --exclude='.env.*' \
-    --exclude='logs' \
-    --exclude='*.log' \
-    --exclude='dist' \
-    --exclude='.DS_Store' \
-    --exclude='.vscode' \
-    --exclude='.idea' \
-    --exclude='tests' \
-    --exclude='project.tar.gz' \
-    -czf project.tar.gz .
-
-scp project.tar.gz root@47.86.56.73:/root/
-
-ssh root@47.86.56.73
-
-tar -xzf project.tar.gz
+## Deployment
+Deployment reference: deploy.txt
+AWS access address: http://13.229.135.99
