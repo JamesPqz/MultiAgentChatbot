@@ -220,6 +220,34 @@ curl -X DELETE http://localhost:3000/api/ab-chat/ab-test/clear
 - Sensitive tools require user confirmation via interrupt & resume flow
 - AB test records latency, response length, and success rate
 
+### Single-Agent Graph Structure
+```mermaid
+flowchart LR
+    START --> AgentNode
+    AgentNode -- Need Tool Call --> ToolsNode
+    ToolsNode --> AgentNode
+    AgentNode -- No Tool Call --> END
+```
+
+### Multi-Agent Graph Structure
+```mermaid
+flowchart LR
+    START --> SupervisorNode
+    SupervisorNode -->|Tool Task| ToolAgentNode
+    SupervisorNode -->|Vision Task| VisionAgentNode
+    SupervisorNode -->|Chat Task| ChatAgentNode
+    ToolAgentNode --> END
+    VisionAgentNode --> END
+    ChatAgentNode --> END
+```
+
+## Interrupt Question Examples:
+- Delete file: delete file test.txt → delete_file
+- Send email: Send an email to test@example.com → send_email
+- Confirm transfer: transfer 10000 USD to James → confirm_transfer
+- Confirm risk: Invest $10000 in bitcoin → confirm_risk_acknowledgment
+- Confirm identity: change my password to 12345 → confirm_identity_change
+
 ## Deployment
 - Deployment reference: deploy.txt
 - AWS access address: http://13.229.135.99
