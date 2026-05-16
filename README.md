@@ -221,17 +221,25 @@ curl -X DELETE http://localhost:3000/api/ab-chat/ab-test/clear
 - AB test records latency, response length, and success rate
 
 ### Single-Agent Graph Structure
-START → Agent Node
-        ↓ (if tool call)
-        Tools Node → loop back to Agent Node
-        ↓ (no tool call)
-        END
+```mermaid
+flowchart LR
+    START --> AgentNode
+    AgentNode -->|Need Tool Call| ToolsNode
+    ToolsNode --> AgentNode
+    AgentNode -->|No Tool Call| END
+```
 
 ### Multi-Agent Graph Structure
-START → Supervisor Node
-        ├─ Tool Task → Tool Agent Node → END
-        ├─ Vision Task → Vision Agent Node → END
-        └─ Chat Task → Chat Agent Node → END
+```mermaid
+flowchart LR
+    START --> SupervisorNode
+    SupervisorNode -->|Tool Task| ToolAgentNode
+    SupervisorNode -->|Vision Task| VisionAgentNode
+    SupervisorNode -->|Chat Task| ChatAgentNode
+    ToolAgentNode --> END
+    VisionAgentNode --> END
+    ChatAgentNode --> END
+```
 
 ## Interrupt Question Examples:
 - Delete file: delete file test.txt → delete_file
