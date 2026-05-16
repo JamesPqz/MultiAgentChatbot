@@ -1,0 +1,140 @@
+AWS EC2 (t3.micro) 新加坡 Chatbot 部署文档
+
+================================================================================
+1. 服务器初始化
+================================================================================
+
+1.1 连接服务器（本地终端执行）
+--------------------------------
+chmod 400 ~/Downloads/chatbot-jp.pem
+ssh -i ~/Downloads/chatbot-jp.pem ec2-user@13.229.135.99
+
+1.2 安装 Docker & Compose（服务器内执行）
+-----------------------------------------
+sudo yum update -y
+sudo yum install docker -y
+sudo systemctl start docker
+sudo systemctl enable docker
+sudo usermod -aG docker ec2-user
+newgrp docker
+
+sudo curl -L "https://github.com/docker/compose/releases/download/v2.29.7/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+sudo chmod +x /usr/local/bin/docker-compose
+
+docker --version
+docker-compose --version
+
+================================================================================
+2. 项目上传与配置
+================================================================================
+
+2.1 上传项目（本地终端执行）
+---------------------------
+scp -i ~/Downloads/chatbot-jp.pem -r ./project ec2-user@13.229.135.99:~/
+
+2.2 服务器端进入项目目录
+------------------------
+cd ~/project
+
+2.3 生成环境变量文件 .env.docker（服务器内执行）
+-----------------------------------------------
+cat > .env.docker << 'EOF'
+NODE_ENV=production
+PORT=3000
+
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=gemini-2.5-flash
+GEMINI_TEMPERATURE=0.7
+PROXY_ENABLED=false
+
+QWEN_API_KEY=your_qwen_api_key
+QWEN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
+
+MONGODB_URI=mongodb://mongodb:27017/chatbot
+
+CORS_ORIGIN=*
+DOCKER_ENV=true
+EOF
+
+2.4 docker-compose.yml 配置内容
+-------------------------------
+services:
+  mongodb:
+    image: mongo:7
+    container_name: chatbot-mongodb
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
+      - NODE_OPTIONS=--dns-result-order=ipv4first
+    container_name: chatbot-backend
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env.docker
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - mongodb
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: chatbot-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  mongodb_data:
+
+================================================================================
+3. 安全组配置（AWS 控制台）
+================================================================================
+入站规则添加：
+- SSH: 22/TCP, 0.0.0.0/0
+- HTTP: 80/TCP, 0.0.0.0/0
+- 自定义TCP: 3000/TCP, 0.0.0.0/0
+- HTTPS: 443/TCP, 0.0.0.0/0
+
+================================================================================
+4. 启动与验证
+================================================================================
+
+4.1 启动服务（服务器内执行）
+----------------------------
+docker-compose down
+docker-compose up -d --build
+
+4.2 验证容器状态
+----------------
+docker-compose ps
+curl -v http://localhost
+
+4.3 访问地址
+------------
+前端: http://13.229.135.99
+后端: http://13.229.135.99:3000
+
+================================================================================
+5. 常用命令
+================================================================================
+查看状态：
+docker-compose ps
+
+查看日志：
+docker-compose logs -f
+
+重启服务：
+docker-compose restart
+
+停止服务：
+docker-compose down

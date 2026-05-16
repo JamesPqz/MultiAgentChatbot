@@ -18,7 +18,7 @@ services:
       - "3000:3000"
     env_file:
       - .env.docker
-      - .env.docker.local
+      # - .env.docker.local
     extra_hosts:
       - "host.docker.internal:host-gateway"
     depends_on:
