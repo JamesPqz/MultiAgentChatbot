@@ -1,6 +1,7 @@
 import { AIMessage, HumanMessage } from '@langchain/core/messages';
 import { multiAgentGraph } from './m_agent';
 import { logger } from '../../utils/logger';
+import { constants } from '../../config/constants';
 
 export interface MultiAgentResult {
     response: string;
@@ -17,15 +18,16 @@ export async function runMultiAgent(
 ): Promise<MultiAgentResult> {
     const startTime = Date.now();
 
-    // Build message history (last 10 messages for context)
+    // Build message history 
     const messages: (HumanMessage | AIMessage)[] = [];
-    for (const h of history.slice(-10)) {
+    for (const h of history.slice(constants.DEFAULT_HISTORY_LIMIT * -1)) {
         if (h.role === 'user') {
             messages.push(new HumanMessage(h.content));
         } else {
             messages.push(new AIMessage(h.content));
         }
     }
+    userMessage = `${userMessage}\n\nPlease answer in 1-2 short sentences.`;
     messages.push(new HumanMessage(userMessage));
 
     const initialState = {

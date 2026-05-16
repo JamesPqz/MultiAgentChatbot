@@ -17,6 +17,7 @@ import { runAgent as runSingleAgent } from '../agents/runner';
 // Multi-agent
 import { runMultiAgent } from '../agents/multi/m_runner';
 import { getQwenVisionModel } from '../agents/model';
+import { constants } from '../config/constants';
 
 const router = Router();
 
@@ -90,7 +91,7 @@ router.post('/chat', async (req: Request, res: Response) => {
     try {
         await saveMessage(sessionId, 'user', cleanMessage || '[Image]');
         let history = await getHistory(sessionId);
-        history = history.slice(-6)
+        history = history.slice(constants.DEFAULT_HISTORY_LIMIT * -1); 
 
         let variant: 'A' | 'B' = getVariant(sessionId, agentMode);
 

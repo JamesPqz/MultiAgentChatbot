@@ -58,7 +58,7 @@ const isLoading = ref(false);
 const isTyping = ref(false);
 const sessionId = ref<string | null>(localStorage.getItem('sessionId'));
 
-const agentMode = ref<'single' | 'multi' | 'auto'>('multi');
+const agentMode = ref<'single' | 'multi' | 'auto'>('auto');
 watch(agentMode, (val) => {
     console.log('ChatContainer agentMode changed to:', val);
 });

@@ -3,9 +3,19 @@ import { WEATHER_MOCK_DATA, DEFAULT_WEATHER_MOCK } from '../../config/fallback/w
 import { constants } from '../../config/constants';
 import { logger } from '../../utils/logger';
 
+
+const OPENWEATHER_API_KEY = '';
+const OPENWEATHER_BASE_URL = 'https://cn-api.openweathermap.org/data/2.5/weather';
+
 async function fetchRealWeather(city: string): Promise<string | null> {
+    if (!OPENWEATHER_API_KEY) {
+        logger.warn('OpenWeather API key not configured, using mock');
+        return null;
+    }
+
     try {
-        const url = `https://wttr.in/${encodeURIComponent(city)}?format=%C+%t+%w`;
+        const encodedCity = encodeURIComponent(city);
+        const url = `${OPENWEATHER_BASE_URL}?q=${encodedCity}&units=metric&appid=${OPENWEATHER_API_KEY}`;
         
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), constants.API_TIMEOUT_MS);
@@ -14,18 +24,23 @@ async function fetchRealWeather(city: string): Promise<string | null> {
         clearTimeout(timeoutId);
 
         if (response.ok) {
-            const weatherText = await response.text();
-            const result = weatherText.trim().split('\n')[0];
-            return `${city} weather: ${result}`;
+            const data = await response.json();
+            const weatherDesc = data.weather?.[0]?.description || 'unknown';
+            const temp = Math.round(data.main?.temp || 0);
+            const feelsLike = Math.round(data.main?.feels_like || 0);
+            const humidity = data.main?.humidity || 0;
+            const windSpeed = data.wind?.speed || 0;
+            
+            return `${city} weather: ${weatherDesc}, temperature: ${temp}°C (feels like ${feelsLike}°C), humidity: ${humidity}%, wind: ${windSpeed}m/s`;
         } else {
-            console.warn(`Weather API (wttr.in) returned ${response.status} for city: ${city}`);
+            logger.warn(`OpenWeather API returned ${response.status} for city: ${city}`);
             return null;
         }
     } catch (error: any) {
         if (error.name === 'AbortError') {
-            console.warn(`Weather API (wttr.in) timeout for city: ${city}`);
+            logger.warn(`Weather API (OpenWeather) timeout for city: ${city}`);
         } else {
-            console.warn(`Weather API (wttr.in) error for city ${city}: ${error.message}`);
+            logger.warn(`Weather API (OpenWeather) error for city ${city}: ${error.message}`);
         }
         return null;
     }

@@ -1,13 +1,13 @@
 export const constants = {
 
     // API 超时配置
-    API_TIMEOUT_MS: 2000,
-    MODEL_TIMEOUT_MS: 20000,
+    API_TIMEOUT_MS: 1500,
+    MODEL_TIMEOUT_MS: 15000,
 
     // 会话
     SESSION_ID_LENGTH: 64,
     DEFAULT_SESSION_LIMIT: 20,
-    DEFAULT_HISTORY_LIMIT: 10,
+    DEFAULT_HISTORY_LIMIT: 5,
     
     // 消息
     MAX_MESSAGE_LENGTH: 5000,

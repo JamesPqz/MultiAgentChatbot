@@ -49,10 +49,14 @@ const onSessionChange = () => {
     emit('update:sessionId', localSessionId.value);
 };
 
-const selectedMode = ref(props.agentMode);
+const selectedMode = ref(props.agentMode);  
 
 watch(selectedMode, (val) => {
     emit('update:agentMode', val);
+});
+
+watch(() => props.agentMode, (val) => {
+    selectedMode.value = val;
 });
 </script>
 

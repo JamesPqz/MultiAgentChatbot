@@ -40,6 +40,7 @@ const toolsByName = {
 async function invokeModelWithTimeout(messages: any[], timeoutMs: number = constants.MODEL_TIMEOUT_MS) {
     try {
         const model = createModel().bindTools(tools);
+        logger.info(`Using model: ${model.name}`);
         const response = await withTimeout(
             model.invoke(messages),
             timeoutMs,
@@ -134,7 +135,7 @@ async function toolsNode(state: AgentState) {
 // build the state graph
 const workflow = new StateGraph<AgentState>({
     channels: {
-        messages: { value: (a, b) => [...a, ...b], default: () => [] },
+        messages: { value: (a, b) => [...a, ...b].slice(-constants.DEFAULT_HISTORY_LIMIT), default: () => [] },
         sessionId: { value: (a, b) => b || a, default: () => '' },
         next: { value: (a, b) => b || a, default: () => END }
     }

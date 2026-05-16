@@ -8,7 +8,7 @@ const getProxyHost = () => {
 };
 
 export const proxyConfig = {
-    enabled: process.env.PROXY_ENABLED === 'false',
+    enabled: process.env.PROXY_ENABLED === 'true',
     host: getProxyHost(),
     port: parseInt(process.env.PROXY_PORT || '7897'),
     timeout: parseInt(process.env.PROXY_TIMEOUT || '30000'),  // 代理超时

@@ -40,7 +40,7 @@ export const createModel = () => {
 
 export const createFastModel = () => {
     return new ChatGoogleGenerativeAI({
-        model: 'gemini-2.5-flash',
+        model: geminiConfig.fastModel,
         temperature: geminiConfig.temperature,
         maxOutputTokens: 100,
         apiKey: geminiConfig.apiKey,
@@ -53,7 +53,7 @@ export const createFastModel = () => {
 
 export const getVisionModel = () => {
     return genAI.getGenerativeModel({
-        model: geminiConfig.model,
+        model: geminiConfig.visionModel,
         generationConfig: {
             temperature: 0.4,
             maxOutputTokens: 150,
@@ -68,6 +68,18 @@ import { qwenConfig } from '../config/qwen';
 export const createQwenModel = () => {
     return new ChatOpenAI({
         model: qwenConfig.model,
+        temperature: qwenConfig.temperature,
+        maxTokens: qwenConfig.maxTokens,
+        apiKey: process.env.QWEN_API_KEY,
+        configuration: {
+            baseURL: process.env.QWEN_BASE_URL
+        }
+    });
+};
+
+export const createQwenFastModel = () => {
+    return new ChatOpenAI({
+        model: qwenConfig.fastModel,
         temperature: qwenConfig.temperature,
         maxTokens: qwenConfig.maxTokens,
         apiKey: process.env.QWEN_API_KEY,

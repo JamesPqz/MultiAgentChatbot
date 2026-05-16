@@ -1,13 +1,13 @@
 import { SystemMessage, AIMessage } from '@langchain/core/messages';
 import { MultiAgentState } from './m_state';
-import { createModel, createQwenModel } from '../model';
+import { createModel, createQwenFastModel, createQwenModel } from '../model';
 import { logger } from '../../utils/logger';
 import { withTimeout } from '../../utils/timeout';
 import { constants } from '../../config/constants';
 import { CHAT_AGENT_PROMPT } from '../../config/m_prompt';
 
 async function invokeWithTimeout(messages: any[], timeoutMs: number = constants.MODEL_TIMEOUT_MS) {
-    const model = createQwenModel()
+    const model = createQwenFastModel()
     // logger.info(`Using model: ${model.model}`);
     try {
         logger.info(`Invoking model with ${messages}`)
