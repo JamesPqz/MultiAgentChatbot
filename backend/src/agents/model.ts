@@ -1,3 +1,4 @@
+
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { ProxyAgent, setGlobalDispatcher } from 'undici';
@@ -5,11 +6,11 @@ import { proxyConfig } from '../config/proxy';
 import { geminiConfig } from '../config/gemini';
 import { logger } from '../utils/logger';
 
-if (proxyConfig.enabled) {
-    const proxyAgent = new ProxyAgent(proxyConfig.url);
-    setGlobalDispatcher(proxyAgent);
-    logger.info(`Proxy enabled: ${proxyConfig.url}`);
-}
+// if (proxyConfig.enabled) {
+//     const proxyAgent = new ProxyAgent(proxyConfig.url);
+//     setGlobalDispatcher(proxyAgent);
+//     logger.info(`Proxy enabled: ${proxyConfig.url}`);
+// }
 
 const genAI = new GoogleGenerativeAI(geminiConfig.apiKey);
 
@@ -70,7 +71,7 @@ export const createQwenModel = () => {
         model: qwenConfig.model,
         temperature: qwenConfig.temperature,
         maxTokens: qwenConfig.maxTokens,
-        apiKey: process.env.QWEN_API_KEY,
+        apiKey: process.env.QWEN_API_KEY || '',
         configuration: {
             baseURL: process.env.QWEN_BASE_URL
         }
@@ -82,7 +83,7 @@ export const createQwenFastModel = () => {
         model: qwenConfig.fastModel,
         temperature: qwenConfig.temperature,
         maxTokens: qwenConfig.maxTokens,
-        apiKey: process.env.QWEN_API_KEY,
+        apiKey: process.env.QWEN_API_KEY || '',
         configuration: {
             baseURL: process.env.QWEN_BASE_URL
         }
@@ -94,7 +95,7 @@ export const getQwenVisionModel = () => {
         model: qwenConfig.visionModel,
         temperature: qwenConfig.temperature,
         maxTokens: qwenConfig.maxTokens,
-        apiKey: process.env.QWEN_API_KEY,
+        apiKey: process.env.QWEN_API_KEY || '',
         configuration: {
             baseURL: process.env.QWEN_BASE_URL
         }

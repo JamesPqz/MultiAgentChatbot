@@ -17,26 +17,26 @@ import { constants } from '../config/constants';
 const router = Router();
 
 // proxy setup
-const proxyAgent = new ProxyAgent(proxyConfig.url);
-setGlobalDispatcher(proxyAgent);
+// const proxyAgent = new ProxyAgent(proxyConfig.url);
+// setGlobalDispatcher(proxyAgent);
 
 // Gemini init
 const genAI = getGenAI()
 const visionModel = getVisionModel()
 
 // get outbound IP
-async function getOutboundIP(): Promise<string> {
-    try {
-        const response = await undiciFetch('https://ifconfig.me/ip', {
-            dispatcher: proxyAgent
-        });
-        const ip = await response.text();
-        return ip.trim();
-    } catch (error) {
-        logger.error('get outbound IP fail', error);
-        return 'unknown';
-    }
-}
+// async function getOutboundIP(): Promise<string> {
+//     try {
+//         const response = await undiciFetch('https://ifconfig.me/ip', {
+//             dispatcher: proxyAgent
+//         });
+//         const ip = await response.text();
+//         return ip.trim();
+//     } catch (error) {
+//         logger.error('get outbound IP fail', error);
+//         return 'unknown';
+//     }
+// }
 
 function getSessionId(inputSessionId: any): string {
     return inputSessionId || generateSessionId();
